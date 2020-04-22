@@ -1,0 +1,329 @@
+---
+title: "assessment"
+author: "Josh Erickson"
+date: "April 16, 2020"
+output: html_document
+---
+```{r}
+library(sp)
+library(rgdal)
+library(rgeos)
+library(raster)
+library(automap)
+library(caret)
+library(CAST)
+library(blockCV)
+library(tidyverse)
+library(gridExtra)
+library(reshape2)
+library(doParallel)
+library(parallel)
+library(mlbench)
+library(plotROC)
+library(pdp)
+library(vip)
+library(gridGraphics)
+library(grid)
+```
+
+Grab the resample data that was done in tuning and use `resamples` function to then explore.
+
+
+```{r}
+resamps <- resamples(list(HUC12 = ffs12tune.hw,
+                          BlockCV = ffsMedtune.hw,
+                          HUC14 = ffs14tune.hw,
+                          Kmeans = ffsKtune.hw,
+                          TopoK = ffsTopo.hw,
+                          Topo12 = ffsTopo12.hw,
+                          TopoBCV = ffsTopoMed.hw,
+                          Topo14 = ffsTopo14.hw))
+resamps2 <- resamples(list(KmeansLLO = ffsKllo.hw,
+                           KmeansLLOtopo = ffsKlloTopo.hw))
+resamps3 <- resamples(list(HUC14LLO = ffs14llo.hw,
+                           HUC14LLOtopo = ffs14lloTopo.hw))
+resamps4 <- resamples(list(HUC12 = ffs12tune.hw,
+                           Kmeans = ffsKtune.hw))
+resamps
+summary(resamps, resamples = "final", metric = "J")
+
+theme1 <- trellis.par.get()
+theme1$plot.symbol$col = rgb(.2, .2, .2, .4)
+theme1$plot.symbol$pch = 16
+theme1$plot.line$col = rgb(1, 0, 0, .7)
+theme1$plot.line$lwd <- 2
+trellis.par.set(theme1)
+bwplot(resamps, resamples = "final",metric = c("Kappa","J","Accuracy"),layout = c(5, 1))
+```
+
+
+Comparing the resamples of each model hold-out and whether it was topography only or 
+topography,optical and radar.
+
+```{r}
+trellis.par.set(caretTheme())
+
+d1 <- densityplot(resamps,models = c("HUC12","Topo12"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+d2 <- densityplot(resamps,models = c("BlockCV","TopoBCV"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+
+d3 <- densityplot(resamps,models = c("HUC14","Topo14"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+
+d4 <- densityplot(resamps,models = c("Kmeans","TopoK"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+
+```
+
+```{r}
+grid.arrange(d1,d2,d3,d4, ncol = 2)
+```
+Exploring other cominations with all groups together, leave-one-out cv LLOCV.
+```{r}
+d5 <- densityplot(resamps,models = c("HUC12","BlockCV","HUC14","Kmeans"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+d6 <- densityplot(resamps,models = c("Topo12","Topo14","TopoK","TopoBCV"), pch = "|", metric = "Kappa", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+
+d7 <- densityplot(resamps2,models = c("KmeansLLO","KmeansLLOtopo"), pch = "|", metric = "Accuracy", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+
+d8 <- densityplot(resamps3,models = c("HUC14LLO","HUC14LLOtopo"), pch = "|", metric = "J", auto.key = list(columns = 2,
+                                            lines = TRUE,
+                                            points = FALSE))
+```
+
+Now look at a dot plot with 95% ci.
+
+```{r}
+trellis.par.set(caretTheme())
+dotplot(resamps, metric = "J")
+```
+
+```{r}
+splom(resamps, metric = "Specificity")
+```
+
+Now we can test each model against each other to see if there is any significant
+difference. We will use the benjimini-hochborg method to account fot false pos.rate.
+
+```{r}
+library(caret)
+difValues <- diff(resamps,adjustment = "BH")
+difValues2 <- diff(resamps2)
+difValues
+difValues2
+difValues3 <- diff(resamps3, adjustment = "BH")
+difValues4 <- diff(resamps4)
+
+pander::pander(summary(difValues)[[3]]$J)
+summary(difValues)[[3]]$Kappa
+summary(difValues2)
+summary(difValues3)
+summary(difValues4)
+bwplot(difValues, layout = c(2, 1), metric = c("J","Kappa"))
+dotplot(difValues,metric = "J")
+```
+
+We can also look at the lift results. 
+
+```{r}
+lift_results <- data.frame(stream = test$stream)
+lift_results$HUC12 <- predict(ffs12tune.hw, test, type = "prob")[,"X0"]
+
+lift_results$BlockCV <- predict(ffsMedtune.hw, test, type = "prob")[,"X0"]
+lift_results$HUC14 <- predict(ffs14tune.hw, test, type = "prob")[,"X0"]
+lift_results$Kmeans <- predict(ffsKtune.hw, test, type = "prob")[,"X0"]
+lift_results$HUC12top <- predict(ffsTopo12.hw, test, type = "prob")[,"X0"]
+
+lift_results$BlockCVtop <- predict(ffsTopoMed.hw, test, type = "prob")[,"X0"]
+lift_results$HUC14top <- predict(ffsTopo14.hw, test, type = "prob")[,"X0"]
+lift_results$Kmeanstop <- predict(ffsTopo.hw, test, type = "prob")[,"X0"]
+head(lift_results)
+```
+
+```{r}
+trellis.par.set(caretTheme())
+
+lift_obj <- caret::lift(stream ~ Kmeans + Kmeanstop, data = lift_results)
+plot(lift_obj, values = 60, auto.key = list(columns = 3,
+                                            lines = TRUE,
+                                            points = FALSE))
+```
+
+Now look at a calibration curve. I think for glancing this is good. However,
+for me it's hard to interpret because you don't know why they are wrong...
+Good for global analysis of probabilities.
+
+```{r}
+trellis.par.set(caretTheme())
+cal_obj <- calibration(stream ~ Kmeans + Kmeanstop,
+                       data = lift_results,
+                       cuts = 20)
+plot(cal_obj, type = "l", auto.key = list(columns = 3,
+                                          lines = TRUE,
+                                          points = FALSE))
+```
+
+```{r}
+ggplot(cal_obj)
+```
+
+Now we can get a confusion matrix, but we need to add J.
+
+```{r}
+library(randomForest)
+library(tidyverse)
+levels(test$stream) <- c("X0", "X1")
+
+conf12 <-confusionMatrix(test$stream,predict(ffs12tune.hw, test,"raw"))
+conf12$byClass$J <-  conf12$byClass[1]+conf12$byClass[2]-1
+
+confBCV <-confusionMatrix(test$stream,predict(ffsMedtune.hw, test,"raw"))
+confBCV$byClass$J <-  confBCV$byClass[1]+confBCV$byClass[2]-1
+
+conf14 <-confusionMatrix(test$stream,predict(ffs14tune.hw, test,"raw"))
+conf14$byClass$J <-  conf14$byClass[1]+conf14$byClass[2]-1
+
+confK <-confusionMatrix(test$stream,predict(ffsKtune.hw, test,"raw"))
+confK$byClass$J <-  confK$byClass[1]+confK$byClass[2]-1
+
+conf12Topo <-confusionMatrix(test$stream,predict(ffsTopo12.hw, test,"raw"))
+conf12Topo$byClass$J <-  conf12Topo$byClass[1]+conf12Topo$byClass[2]-1
+
+confBCVTopo <-confusionMatrix(test$stream,predict(ffsTopoMed.hw, test,"raw"))
+confBCVTopo$byClass$J <-  confBCVTopo$byClass[1]+confBCVTopo$byClass[2]-1
+
+conf14Topo <-confusionMatrix(test$stream,predict(ffsTopo14.hw, test,"raw"))
+conf14Topo$byClass$J <-  conf14Topo$byClass[1]+conf14Topo$byClass[2]-1
+
+confKTopo <-confusionMatrix(test$stream,predict(ffsTopo.hw, test,"raw"))
+confKTopo$byClass$J <-  confKTopo$byClass[1]+confKTopo$byClass[2]-1
+
+```
+
+```{r}
+confK
+confKTopo
+
+conf12
+conf12Topo
+
+confBCV
+confBCVTopo
+
+conf14
+conf14Topo
+
+```
+
+Now that we looked at the global statistics lets dive into the local.
+
+```{r}
+library(lime)
+#get variables to use 
+ffsKtune.hw$finalModel$xNames
+
+explainer.K <- lime(x = traintune[,c("tpi30agg","accum30","vv30agg",     "vvsd30agg","ndvi30yrRS","ndwias30agg","nppmmid30agg","cad30RS","decid30RS",    "B2_30agg","B8_30agg","cpg30precip")], model = ffsKtune.hw)
+
+explanation.K <- explain(x = test[,c("tpi30agg","accum30","vv30agg",     "vvsd30agg","ndvi30yrRS","ndwias30agg","nppmmid30agg","cad30RS","decid30RS",    "B2_30agg","B8_30agg","cpg30precip")], explainer = explainer.K,labels = "X1",
+                          n_features = 8)
+
+explainer.Ktopo <- lime(x = traintune[,c("accum30","tpi30agg","twi30agg")], model = ffsTopo.hw)
+
+explanation.Ktopo <- explain(x = test[,c("accum30","tpi30agg","twi30agg")], explainer = explainer.Ktopo, labels = "X1",
+                        n_features = 3)
+
+```
+
+Now we can filter through the data and see where we are getting 'off' results
+spatially and probabilistically. 
+
+
+```{r}
+
+explanation.K$obs <- test[rep(seq_len(nrow(test)), each = 8), 1]
+pred.K <- data.frame(predict(object = ffsKtune.hw, test, "raw"))
+explanation.K$pred <- pred.K[rep(seq_len(nrow(pred.K)), each = 8), 1]
+explanation.K$coords.x1 <- test[rep(seq_len(nrow(test)), each = 8), 22]
+explanation.K$coords.x2 <- test[rep(seq_len(nrow(test)), each = 8), 23]
+
+explanation.Ktopo$obs <- test[rep(seq_len(nrow(test)), each = 3), 1]
+pred.Ktopo <- data.frame(predict(object = ffsTopo.hw, test, "raw"))
+explanation.Ktopo$pred <- pred.Ktopo[rep(seq_len(nrow(pred.Ktopo)), each = 3), 1]
+explanation.Ktopo$coords.x1 <- test[rep(seq_len(nrow(test)), each = 3), 22]
+explanation.Ktopo$coords.x2 <- test[rep(seq_len(nrow(test)), each = 3), 23]
+
+wrong.K <- explanation.K %>% filter(pred != obs) #130 wrong
+wrong.Ktopo <- explanation.Ktopo %>% filter(pred != obs) #221 wrong
+```
+
+
+Now we can look at these cases and see what the model is doing essentially. refer to Ribiero, 2016 for more information.
+
+```{r}
+#filter by quartile splits
+
+wrong.K <- wrong.K %>% mutate(Qsplit = cut(label_prob, breaks = c(0,0.25,0.50,0.75,1), 
+      labels=c("0-25","25-50","50-75","75-100")))
+summary(wrong.K$Qsplit)/8
+
+wrong.Ktopo <- wrong.Ktopo %>% mutate(Qsplit = cut(label_prob, breaks = c(0,0.25,0.50,0.75,1),labels=c("0-25","25-50","50-75","75-100")))
+summary(wrong.Ktopo$Qsplit)/3
+
+```
+
+Compare the summary stats by a bar plot.
+
+```{r}
+bar_graph <- data.frame(count = c(34,75,57,55,15,56,45,14),
+                        Qsplit  = c("0-25","25-50","50-75","75-100","0-25","25-50","50-75","75-100"),
+                        model = c("Ktopo", "Ktopo", "Ktopo","Ktopo","K means","K means","K means","K means"))
+
+bar_graph %>% ggplot() + geom_bar(aes(Qsplit,count ,fill = model),
+                                  position = "dodge",
+                                  stat = "identity") + ggtitle("predicted wrong between topo-only model and ffs topo, optical and radar")
+```
+
+So from the graph it looks like the topo-only model is overfitting some of the 75-100% probabilities. Let's see if there is an observation where both are the same, i.e. both models got it wrong. Then we can see why the model predicted the way it did. 
+
+```{r}
+#add identifiers
+wrong.K$model <- "Kmeans"
+wrong.Ktopo$model <- "Ktopo"
+merge_wrongs <- rbind(wrong.K,wrong.Ktopo)
+merge_wrongs <- merge_wrongs %>% mutate(dist =  coords.x1-coords.x2)
+gr75 <- merge_wrongs %>% filter(Qsplit == "75-100" & duplicated(dist))
+
+nestgr75 <- gr75 %>% group_by(dist)
+```
+```{r}
+p1 <- plot_features(wrong.Ktopo, case = 7378)
+p2 <- plot_features(explanation.K, cases = 7378)
+```
+
+
+put them into to points now and see where these wrong obs are.
+```{r}
+library(sf)
+ptsWrongK <-  st_as_sf(wrong.K, coords = c("coords.x1","coords.x2"))
+
+st_crs(ptsWrongK) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+write_sf(ptsWrongK, "ptsWrongK.shp")
+
+ptsWrongKtopo <-  st_as_sf(wrong.Ktopo, coords = c("coords.x1","coords.x2"))
+
+st_crs(ptsWrongKtopo) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+write_sf(ptsWrongKtopo, "ptsWrongKtopo.shp")
+```
+
