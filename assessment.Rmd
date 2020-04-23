@@ -6,6 +6,7 @@ output: html_document
 ---
 ```{r}
 library(sp)
+library(sf)
 library(rgdal)
 library(rgeos)
 library(raster)
@@ -306,8 +307,9 @@ gr75 <- merge_wrongs %>% filter(Qsplit == "75-100" & duplicated(dist))
 nestgr75 <- gr75 %>% group_by(dist)
 ```
 ```{r}
-p1 <- plot_features(wrong.Ktopo, case = 7378)
-p2 <- plot_features(explanation.K, cases = 7378)
+p1 <- plot_features(wrong.Ktopo, cases = 8444)
+p2 <- plot_features(explanation.K, cases = 8428)
+p3 <- plot_features(wrong.K , cases = 2859)
 ```
 
 
@@ -325,5 +327,67 @@ ptsWrongKtopo <-  st_as_sf(wrong.Ktopo, coords = c("coords.x1","coords.x2"))
 st_crs(ptsWrongKtopo) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
 write_sf(ptsWrongKtopo, "ptsWrongKtopo.shp")
+
+ptsK <- st_as_sf(explanation.K, coords = c("coords.x1","coords.x2"))
+
+st_crs(ptsK) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+
+write_sf(ptsK, "ptsK.shp")
+
+ptsKtopo <- st_as_sf(explanation.Ktopo, coords = c("coords.x1","coords.x2"))
+
+st_crs(ptsKtopo) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+
+write_sf(ptsKtopo, "ptsKtopo.shp")
+```
+
+Now bring in nhdPlus to get some baseline results
+
+```{r}
+install.packages("nhdplusTools")
+library(nhdplusTools)
+
+download_dir <- download_nhdplushr(tempdir(), c("1701"))
+
+nhdPlushr <- get_nhdplushr(download_dir,
+file.path(download_dir, "nhdplus_0302-03.gpkg"),
+layers = "NHDFlowline", overwrite = TRUE, proj = "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+nhdDistrict <- nhdPlushr$NHDFlowline
+
+nhdDistrict <- st_set_crs(nhdDistrict, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+nhdDistrict <- st_crop(nhdDistrict, c(xmin = 150035.8, xmax = 222365.8, 
+                                      ymin = 507390, ymax = 574500 ))
+
+plot(nhdDistrict["StreamOrde"], main = "NHDPlus High Res with Stream Order")
+```
+
+```{r}
+
+nhdDistsp <- as(nhdDistrict, "Spatial")
+nhdDistsp <- as(nhdDistsp, "SpatialLines")
+plot(nhdDistsp)
+nhdDist.R <- rasterize(nhdDistsp, tpi30)
+writeRaster(nhdDist.R, "nhdDist.R.tif")
+
+#now get points from test data and extract
+testPTS <- st_as_sf(test, coords = c("coords.x1","coords.x2"))
+
+st_crs(testPTS) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+test$nhd <- raster::extract(nhdDist.R, testPTS)
+
+#now give the NA's "X0" and the values "X1"
+test$nhd <- ifelse(test$nhd == is.na(test$nhd), "X0", "X1")
+test[is.na(test)] <- "X0"
+test$nhd <- factor(test$nhd)
+#now we have baseline data we can now run a confusion matrix on
+
+confNHD <-confusionMatrix(test$stream,test$nhd)
+confNHD$byClass$J <-  confNHD$byClass[1]+confNHD$byClass[2]-1
+confK
+confKTopo
 ```
 
