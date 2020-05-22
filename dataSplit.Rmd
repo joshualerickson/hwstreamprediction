@@ -7,26 +7,9 @@ output: html_document
 
 ```{r setup, include=FALSE}
 
-load("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/workingthroughproj.RData")
-library(sp)
-library(rgdal)
-library(rgeos)
-library(raster)
-library(automap)
 library(caret)
 library(CAST)
-library(blockCV)
-library(tidyverse)
-library(gridExtra)
-library(reshape2)
-library(doParallel)
-library(parallel)
-library(mlbench)
-library(plotROC)
-library(pdp)
-library(vip)
-library(gridGraphics)
-library(grid)
+library(sf)
 ```
 
 ## Model Selection  
@@ -36,35 +19,27 @@ library(grid)
  Above in the data splitting section I  proposed that we wanted to split the data into three partitions with the test data being the final model performance measure (sanity check). To do this we will split the data into two chunks and then split into test proportions once our final model is selected. This will hopefully give us a *natural* statistic into the final model performance. 
 
 ```{r, eval = FALSE}
-library(caret)
-library(CAST)
 
 
 
 set.seed(1234)
-#split data into training and test data. 90% for training is the goal. 10% for sanity check. 
-dat34index <- createDataPartition(data34$stream, list = FALSE, p=0.90)
+#split data into training and test data. 75% for training and validation. 25% for feature selection. 
+dat34index <- createDataPartition(data34$stream, list = FALSE, p=0.75)
 
 train <- data34[dat34index,]
 
-test <- data34[-dat34index,]
+FeatureSelection <- data34[-dat34index,]
 
-#then split the training data into two so we have 'overall' 40% for feature selection and 'overall' 60% for training.
-set.seed(1234)
-trainindex <- createDataPartition(train$stream, list = FALSE, p = .6)
+FeatureSelectionSF <- st_as_sf(FeatureSelection, coords = c("lon","lat"))
 
-traintune <- train[trainindex,]
+st_crs(FeatureSelectionSF) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
-trainsel <- train[-trainindex,]
 
-testSF <- st_as_sf(test, coords = c("coords.x1","coords.x2"))
-
-st_crs(testSF) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 ```
 
 Now check and see the final sanity check data. 
 ```{r}
-plot(testSF["stream"])
+plot(FeatureSelectionSF["stream"])
 ```
 
 Looks good.
@@ -76,36 +51,11 @@ Another important step in evaluating spatial data is accounting for spatial auto
 ```{r, eval=FALSE}
 library(CAST)
 
-#this is the index for the HUC12 method.
 set.seed(1234)
-indices12sel <- CreateSpacetimeFolds(trainsel, spacevar = "sb12", k = 10)
-
-set.seed(1234)
-indices12tune <- CreateSpacetimeFolds(traintune,spacevar = "sb12", k = 10) 
-
-#now for the blockCV method
+indicesKsel <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster", k = 10)
 
 set.seed(1234)
-indicesMedsel <- CreateSpacetimeFolds(trainsel, spacevar = "sbMed", k = 10)
+indicesKtrain <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster", k = 10) 
 
-set.seed(1234)
-indicesMedtune <- CreateSpacetimeFolds(traintune,spacevar = "sbMed", k = 10) 
-
-#this is the index for the HUC14 method
-
-set.seed(1234)
-indices14sel <- CreateSpacetimeFolds(trainsel, spacevar = "sb14", k = 10)
-
-set.seed(1234)
-indices14tune <- CreateSpacetimeFolds(traintune,spacevar = "sb14", k = 10) 
-
-#now for the cluster method
-
-set.seed(1234)
-indicesKsel <- CreateSpacetimeFolds(trainsel, spacevar = "spatial_cluster", k = 10)
-
-set.seed(1234)
-indicesKtune <- CreateSpacetimeFolds(traintune,spacevar = "spatial_cluster", k = 10) 
- 
 ```
 
