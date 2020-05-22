@@ -7,10 +7,7 @@ output: html_document
 
 ```{r setup, include=FALSE}
 
-load("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/workingthroughproj.RData")
-library(sp)
-library(rgdal)
-library(rgeos)
+library(sf)
 library(raster)
 library(automap)
 library(caret)
@@ -27,55 +24,54 @@ library(pdp)
 library(vip)
 library(gridGraphics)
 library(grid)
+library(nhdplusTools)
 ```
 
 **Now bring in all the TIFs to be used in the anlaysis and stack/visualise.**
-```{r, eval = FALSE, class.output = "pre"}
+```{r, eval = FALSE}
 library(raster)
 
-twi30 <- raster("twi30agg.tif") #TWI
 
-vvsd30 <- raster("vvsd30agg.tif") #vertical vertical sd
+twi30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/twi30agg.tif") #TWI
 
-vv30 <- raster("vv30agg.tif") #vertical vertical mean
+vvsd30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/vvsd30agg.tif") #vertical vertical sd
 
-npol30 <- raster("npol30agg.tif") #normalized polarization 
+vv30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/vv30agg.tif") #vertical vertical mean
 
-ndviAS30 <- raster("ndvias30agg.tif") #NDVI aug-sept
+npol30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/npol30agg.tif") #normalized polarization 
 
-ndwiAS30 <- raster("ndwias30agg.tif") #NDWI aug-sept
+accum30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/accum30.tif") #UAA d-infinity aggregated from 10-m
 
-accum30 <- raster("accum30.tif") #UAA d-infinity aggregated from 10-m
+nppMid30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/nppmmid30agg.tif") #NPP median '86-18'
 
-nppMid30 <- raster("nppmmid30agg.tif") #NPP median '86-18'
+deficit <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/deficitRS.tif") # annual CWD 30 yr
 
-ndvi30yr <- raster("ndvi30yrRS.tif") #NDVI 30 yr
+wtrbdy30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/wtrbdy30agg.tif") #waterbodies
 
-deficit <- raster("deficitRS.tif") # annual CWD 30 yr
+tpi30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/tpi30agg.tif") #TPI
 
-wtrbdy30 <- raster("wtrbdy30agg.tif") #waterbodies
+HDI <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/hdi30RS.tif") #hydrologic deficit index
 
-tpi30 <- raster("tpi30agg.tif") #TPI
+CAD <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/cad30RS.tif") #cold air drainage
 
-HDI <- raster("hdi30RS.tif") #hydrologic deficit index
+decid <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/decid30RS.tif") #deciduous
 
-CAD <- raster("cad30RS.tif") #cold air drainage
+Blue <- raster("Blue_med.tif") #blue (B2)
 
-decid <- raster("decid30RS.tif") #deciduous
+Green <- raster("Green_med.tif") #green (B3)
 
-B2 <- raster("B2_30agg.tif") #blue (B2)
+Red <- raster("Red_med.tif") #red (B4)
 
-B3 <- raster("B3_30agg.tif") #green (B3)
+NIR <- raster("NIR_med.tif") #Near Infrared (B8)
 
-B4 <- raster("B4_30agg.tif") #red (B4)
+NDVI <-  raster("NDVI_med.tif")
+  
+NDWI <-  raster("NDWI_med.tif")
 
-B8 <- raster("B8_30agg.tif") #Near Infrared (B8)
+cpgPrecip <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/cpg30precip.tif") #Continuous parameter grid (precipitation/PRISM).
 
-cpgPrecip <- raster("cpg30precip.tif") #Continuous parameter grid (precipitation/PRISM).
 
-cpgDeficit <- raster("cpg30Deficit.tif") #continuous parameter grid (deficit).
-
-topo_opt_rad34 <- stack(twi30, tpi30, accum30,vv30, vvsd30, npol30, ndvi30yr, ndviAS30, ndwiAS30, nppMid30, deficit, CAD, decid, B2, B3, B4, B8, cpgPrecip)
+topo_opt_rad34 <- stack(twi30, tpi30, accum30,vv30, vvsd30, npol30,  NDVI, NDWI, nppMid30, deficit, CAD, decid, Blue, Green, Red, NIR, cpgPrecip)
 ```
 
 
@@ -88,48 +84,95 @@ plot(topo_opt_rad34, maxnl=32, nc = 4, legend = FALSE)
 **Extract points from stack `topo_opt_rad30` and then combined with `pts`.**
 ```{r, eval = TRUE}
 
-library(arcgisbinding)
-arc.check_product()
-
 #combine point objects
-pts34 <- arc.open("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/points_spaced30m.shp")  #points to the folder/feature
-pts34 <- arc.select(pts34, c("copy_TWI_1", "FID_ksank1", "FID_ksan_1","strorder")) #selects the data in the folder
+proj.study <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
-                        #copy_TWI_1 = stream or no stream, FID_ksan1 & FID_ksan_1 are just the
-                          #HUC 12 and HUC 14 polygon attributes
-                            #we will use later for leave location out (LLO).
+pts34 <- read_sf("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_workflow/points_spaced30m.shp")  #points to the folder/feature
 
-pts34 <- arc.data2sp(pts34) #now we have a spatial points data frame
+st_crs(pts34) <- proj.study
+
+pts34 <- st_transform(pts34, crs = proj.study)
+
+#clean up
+
+pts34 <- pts34[,c(2)]
+
 ```
+
 ```{r, eval=FALSE}
-library(sp)
-library(rgdal)
-library(rgeos)
+
+#Get forest service boundary
+FSland <- read_sf("knf_ownership.shp")
+FSland <- FSland[FSland$OWNER == 'FS',]
+
+FSland <- st_transform(FSland, proj.study)
+
+#Get District Boundary
+DistrictBoundary <- read_sf("hw_study.gpkg", "DistrictBoundary")
+
+DistrictBoundary <- st_transform(DistrictBoundary, proj.study)
+#now intersect
+landClip <- st_intersection(FSland, DistrictBoundary)
+
+plot(FSland)
+
+##st_write(landClip, 'hw_study.gpkg', "LandClip", driver = "ESRI Shapefile", update = TRUE)
+##st_write(DistrictBoundary, 'hw_study.gpkg', "DistrictBoundary", driver = "ESRI Shapefile")
+```
+
+Now get NHDPlus
+
+```{r}
+
+download_dir <- download_nhdplushr(nhd_dir = getwd(), c("1701"))
+nhdPlushr <- get_nhdplushr(getwd(), "nhdplus.gpkg",
+layers = "NHDFlowline", overwrite = TRUE, proj = "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+nhdDistrict <- nhdPlushr$NHDFlowline
+nhdDistrict <- st_transform(nhdDistrict, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+nhdDistrict <- st_crop(nhdDistrict, c(xmin = 150035.8, xmax = 222365.8, 
+                                      ymin = 507390, ymax = 574500 ))
+plot(nhdDistrict["StreamOrde"], main = "NHDPlus High Res with Stream Order")
+
+nhdDistrictSF <- st_as_sf(nhdDistrict)
+st_write(nhdDistrictSF, "hw_study.gpkg", "nhdDistrictSF")
+
+nhdDistrictSF <- st_read("hw_study.gpkg", "nhdDistrictSF")
+#now make a 30m raster with streamorder
+
+ndhStrOrdRast <- rasterize(nhdDistrict, tpi30, field = "StreamOrde")
+
+writeRaster(ndhStrOrdRast, "nhdStrOrdRast.tiff")
+
+nhdStrOrdRast <- raster("nhdStrOrdRast.tif")
+```
+
+
+```{r}
+#sample space area sq/km
+area_sum <- sum(st_area(FSland$geom))
+
+area_km <- area_sum/1000000
+
+
+#add nhd raster
+topo_opt_rad34 <- addLayer(topo_opt_rad34, nhdStrOrdRast)
 
 thrty.34 <- mask(topo_opt_rad34, wtrbdy30, inverse = TRUE) #mask out waterbodies if you want
 
-#Get forest service boundary
-FSland <- readOGR("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/KNF_ownership.shp")
-FSland <- FSland[FSland$OWNER == 'FS',]
-
-#Get District Boundary
-DistrictBoundary <- readOGR("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/fortine_rexford_RD_Bdy.shp")
-
-#now intersect and project
-landClip <- gIntersection(FSland, DistrictBoundary, byid = TRUE)
-
-tpiCRS <- crs(tpi30)
-
-landClip <- spTransform(landClip, tpiCRS)
-
-
-thrty.34 <- mask(thrty.34, landClip) #mask out non-Forest Service land
+thrty.34 <- mask(thrty.34, FSland) #mask out non-Forest Service land
 
 thrty.34 <- raster::extract(thrty.34, pts34) #extract the values from raster by point data
 
 top34.opt.rad <- cbind(pts34, thrty.34)
-top34.opt.rad <- data.frame(top34.opt.rad)
-plot(thrty.34)
+
+top34coords <- do.call(rbind, st_geometry(top34.opt.rad)) %>% 
+    as_tibble() %>% setNames(c("lon","lat"))
+
+st_geometry(top34.opt.rad) <- NULL
+
+top34.opt.rad <- data.frame(cbind(top34.opt.rad,top34coords))
+
+
 
 write.csv(top34.opt.rad, file = "top34.opt.rad.csv")
 ```
@@ -138,39 +181,43 @@ write.csv(top34.opt.rad, file = "top34.opt.rad.csv")
 top34.opt.rad <- read.csv("top34.opt.rad.csv", header = TRUE)[-1]
 
 data34 <- top34.opt.rad #change for ease
-data34 <- data34[,-25] #take out irrelavant index
+
 #change names
-names(data34)[2] <- "HUC12"
-names(data34)[3] <- "HUC14"
 names(data34)[1] <- "stream"
+
+names(data34)[19] <- "NHDPlus"
+
 data34$stream <- factor(data34$stream)
+
+data34$NHDPlus[is.na(data34$NHDPlus)] <- 0
+
 data34 <- na.omit(data34)
-data34 <- data34 %>% filter(strorder < 3)
- # write csv
 
-write.csv(data34, file = "trainDat34.csv")
+data34 <- data34 %>% filter(NHDPlus < 3)
 
-```
+# write csv
 
-
-Now lets look at the histograms of the predictor variables. 
-<br>
-
-```{r fig.align='center',message=FALSE, echo = FALSE}
-library(tidyverse)
-top34.opt.rad <- top34.opt.rad %>% filter(strorder < 3)
-ggplot2::ggplot(gather(top34.opt.rad[,c(5:22)]), aes(value)) + 
-    geom_histogram(bins = 20) + 
-    facet_wrap(~key, scales = 'free_x')
+write.csv(data34, file = "data34.csv")
 
 ```
 
+```{r}
+
+summary(data34)
+data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% gather(key, value) %>% ggplot() + geom_boxplot(aes(value, color = key)) + coord_flip()
+
+data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% map(function(v) {
+   uniqv <- unique(v)
+   uniqv[which.max(tabulate(match(v, uniqv)))]
+})
+
+```
 
 
 ```{r echo=FALSE, fig.align='center'}
 
 par(mfrow=c(1,2))
-boxplot(top34.opt.rad$npol30agg, main="Normalized Polarization")
+boxplot(data34$npol30agg, main="Normalized Polarization")
 boxplot(data34$accum30, main="Upslope Accumulated Area")
 
 
@@ -201,7 +248,7 @@ After visualising, we can take a deeper look and search the data frame for corre
 ```{r fig.align='center'}
 library(corrplot)
 library(caret)
-correlations34 <- cor(data34[,-c(1,2,3,4,23,24)]) #remove response,coords and HUCs
+correlations34 <- cor(data34[,-c(1,16,14,9,19,20,21)]) #remove response,coords and HUCs
 corrplot(correlations34, order = "hclust")
 
 highCorr34 <- findCorrelation(correlations34, cutoff = 0.9)
@@ -213,11 +260,12 @@ highCorr34
 There is one variable recommended to be taken out. Let's see what they are. 
 
 ```{r}
-colnames(correlations34)[15]
+colnames(correlations34)[c(0)]
 ```
 
+We ended up taking out NDWI_med, Blue_med, Red_med
 ```{r eval=FALSE}
-data34 <- data34[, -which(names(data34) %in% "B3_30agg")]
+data34 <- data34[, -which(names(data34) %in% c("NDWI_med", "Blue_med", "Red_med"))]
 
 ```
 
@@ -235,30 +283,13 @@ kableExtra::kable(round(prop.table(table(Stream = pts34$copy_TWI_1)),3), caption
 First we want to bring in our point data and our covariates. 
 ```{r, eval=FALSE}
 library(sf)
-ptsSF34 <- arc.open("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/points_spaced30m.shp")  #points to the folder/feature
-ptsSF34 <- arc.select(ptsSF34, c("copy_TWI_1")) #selects the data in the folder
+ptsSF34 <- st_as_sf(data34, coords = c("lon","lat"))
 
-ptsSF34 <- arc.data2sf(ptsSF34)
-ptsSF34 <- st_as_sf(data34, coords = c("coords.x1","coords.x2"))
-pts
 st_crs(ptsSF34) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 nrow(data34)
-topo_new34 <- dropLayer(topo_opt_rad34, "B3_30agg") #covariate stack
+topo_new34 <- dropLayer(topo_opt_rad34, c("Blue_med", "Red_med", "NDWI_med")) #covariate stack
 topo_new34
 ```
-<br>
-Plot to make sure everything is lined up. Looks good.  
-
-```{r, echo=FALSE, fig.align="center", out.width="50%", message = FALSE}
-#plot to double check
-plot(topo_opt_rad34[[1]], legend = FALSE); plot(hillshade, alpha = 1/10, legend = FALSE, col = grey(1:100/100), add = TRUE);
-plot(ptsSF34[which(ptsSF$stream==0), ], pch = 16, col="red", add=TRUE); 
-plot(ptsSF34[which(ptsSF$stream==1), ], pch = 1, col="blue", add=TRUE, cex = 0.1);
-legend(x=140000, y=570000, legend=c("Absence","Presence"), col=c(2, 4), pch=c(16,1), bty="n")
-
-```
-
-<br>
 
 Now we can figure out our 'effictive range of spatial autocorrelation' by using the function `spatialAutoRange` in `blockCV`. This is a cool function because it takes the covariates, calculates the range of autocorrelation (from $n$ sampled points), and then produces two plots showing the range of the covariates and the recommended block size for validation.  
 
@@ -277,73 +308,7 @@ plot(sac34)
 
 ```
 
-So as you can see there are some variables that are very spatially autocorrelated. The `BlockCV` package recommends the median range as a structure dimension and then disects the sample space into dimensions, e.g. blocks. From here you add the points and `BlockCV` will provide a sampling scheme for cross validation. Pretty sweet! Real quick, here's the summary from the variograms giving the range with each covariate.  
 
-Now we can systematically seperate the blocks out with a k=10 for a 10-fold CV and a range from the derived median.
-
-```{r eval=FALSE}
-library(blockCV)
-sbMed34 <- spatialBlock(speciesData = ptsSF34, # presence-background data
-                    species = "stream",
-                    rasterLayer = topo_new34,
-                    k = 10,
-                      theRange = 5480,
-                    selection = "systematic")
-
-
-```
-```{r eval = TRUE, echo=FALSE, fig.align="center", out.width = "50%"}
-plot(sbMed34$plots)
-```
-<br>
-<br>
-
-Now we can partition the data by Hydrological Unit Codes (12th and 14th HUCs) into 'blocks' based on a systematic approach. Same thing: 10 folds, selection = "systematic". 
-
-
-```{r eval=FALSE}
-
-HUC14SP <- arc.open("ksank14thclip.shp")  #points to the folder/feature
-HUC14SP <- arc.select(HUC14SP, c("FID")) #selects the data in the folder
-
-HUC14SP <- arc.data2sp(HUC14SP)
-
-HUC14SP <- spTransform(HUC14SP,CRSobj = crs(topo_opt_rad30))
-
-sb1434 <- spatialBlock(speciesData = ptsSF34, 
-                    species = "stream", 
-                    rasterLayer = topo_new34, 
-                    blocks = HUC14SP,
-                    k = 10,
-                    selection = "systematic")
-
-
-```
-```{r echo=FALSE}
-sb1434$plots + ggtitle("14th HUC")
-```
-
-
-```{r eval=FALSE}
-HUC12SP <- arc.open("ksank12thclip.shp")  #points to the folder/feature
-HUC12SP <- arc.select(HUC12SP, c("FID")) #selects the data in the folder
-
-HUC12SP <- arc.data2sp(HUC12SP)
-
-HUC12SP <- spTransform(HUC12SP,CRSobj = crs(topo_opt_rad30))
-
-sb1234 <- spatialBlock(speciesData = ptsSF34, 
-                    species = "stream", 
-                    rasterLayer = topo_new34, 
-                    blocks = HUC12SP,
-                    k = 10,
-                    selection = "systematic")
-```
-
-```{r echo=FALSE}
-sb1234$plots + ggtitle("12th HUC")
-```
-<br>
 
 Finally, we can do a `kmeans` with a cluster of 20. This will be our small structure attempt.
 
@@ -352,7 +317,7 @@ Finally, we can do a `kmeans` with a cluster of 20. This will be our small struc
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
 
-Mycluster34 <- kmeans(data34[,c(22,23)], (nrow(data34)/20)) 
+Mycluster34 <- kmeans(data34[,c(17,18)], (nrow(data34)/20)) 
 
 # add the new variable back to your dataframe here
 data34$spatial_cluster = Mycluster34$cluster
@@ -363,15 +328,6 @@ Now you can see the clusters.
 
 ```{r, echo=FALSE, fig.align="center"}
 #just to visualize!
-plot(hillshade, col = grey(1:100/100), legend = FALSE);plot(ptsSF34["spatial_cluster"], add = TRUE) 
+plot(ptsSF34["spatial_cluster"]) 
 ```
 
-<br>
-
-Now bring in the blocks we created (`sb12`,`sb14`,`sb2`) and bind with our data frame `data` so that we can index these during CV.
-```{r eval=FALSE}
-
-data34 <- cbind(data34, sbMed = sbMed34$foldID, sb14 = sb1434$foldID, sb12 = sb1234$foldID)
-data34[1:20,c(24:27)]
-
-```
