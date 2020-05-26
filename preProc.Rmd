@@ -8,6 +8,7 @@ output: html_document
 ```{r setup, include=FALSE}
 
 library(sf)
+library(sp)
 library(raster)
 library(automap)
 library(caret)
@@ -25,6 +26,7 @@ library(vip)
 library(gridGraphics)
 library(grid)
 library(nhdplusTools)
+library(mapproj)
 ```
 
 **Now bring in all the TIFs to be used in the anlaysis and stack/visualise.**
@@ -114,6 +116,9 @@ DistrictBoundary <- st_transform(DistrictBoundary, proj.study)
 #now intersect
 landClip <- st_intersection(FSland, DistrictBoundary)
 
+#read in the landClip we created and call it FSland
+FSland <- read_sf("hw_study.gpkg", "landClip")
+
 plot(FSland)
 
 ##st_write(landClip, 'hw_study.gpkg', "LandClip", driver = "ESRI Shapefile", update = TRUE)
@@ -165,12 +170,20 @@ thrty.34 <- raster::extract(thrty.34, pts34) #extract the values from raster by 
 
 top34.opt.rad <- cbind(pts34, thrty.34)
 
+top34.opt.rad2 <- cbind(pts34, thrty.34)
+
+#get long lat for graphing
+top34.opt.rad2 <- st_transform(top34.opt.rad2, crs = "+proj=longlat +datum=WGS84 +no_defs")
+
 top34coords <- do.call(rbind, st_geometry(top34.opt.rad)) %>% 
+    as_tibble() %>% setNames(c("utm1","utm2"))
+
+top34lonlat <- do.call(rbind, st_geometry(top34.opt.rad2)) %>% 
     as_tibble() %>% setNames(c("lon","lat"))
 
 st_geometry(top34.opt.rad) <- NULL
 
-top34.opt.rad <- data.frame(cbind(top34.opt.rad,top34coords))
+top34.opt.rad <- data.frame(cbind(top34.opt.rad,top34coords, top34lonlat))
 
 
 
@@ -206,19 +219,14 @@ write.csv(data34, file = "data34.csv")
 summary(data34)
 data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% gather(key, value) %>% ggplot() + geom_boxplot(aes(value, color = key)) + coord_flip()
 
-data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% map(function(v) {
-   uniqv <- unique(v)
-   uniqv[which.max(tabulate(match(v, uniqv)))]
-})
+
 
 ```
 
-
 ```{r echo=FALSE, fig.align='center'}
 
-par(mfrow=c(1,2))
-boxplot(data34$npol30agg, main="Normalized Polarization")
-boxplot(data34$accum30, main="Upslope Accumulated Area")
+data34 %>% mutate_at(vars(accum30), log) %>% select(npol30agg, accum30) %>% gather(key, value) %>% ggplot() + geom_boxplot(aes(value)) + coord_flip() + facet_wrap(~key, scales = "free_y")
+
 
 
 
@@ -231,15 +239,12 @@ boxplot(data34$accum30, main="Upslope Accumulated Area")
 data34 <- data34[!data34$npol30agg < -1,]
 data34 <- data34[!data34$npol30agg > 1,]
 ```
-<br>
+
 Now look at the new boxplot and histogram for `npol30agg`, which looks much better.
 
 ```{r echo=FALSE, fig.align='center'}
 #now look at boxplot
-par(mfrow=c(1,2))
-boxplot(data34$npol30agg, main="Normalized Polarization")
-hist(data34$npol30agg, main = "Normalized Polarization")
-
+data34 %>% select(npol30agg) %>% gather(key, value) %>% ggplot() + geom_boxplot(aes(value)) + coord_flip()
 #much better
 ```
 
@@ -248,7 +253,7 @@ After visualising, we can take a deeper look and search the data frame for corre
 ```{r fig.align='center'}
 library(corrplot)
 library(caret)
-correlations34 <- cor(data34[,-c(1,16,14,9,19,20,21)]) #remove response,coords and HUCs
+correlations34 <- cor(data34[,-c(1,9,19,20,21,22,23)]) #remove response and coords and NHDPlus
 corrplot(correlations34, order = "hclust")
 
 highCorr34 <- findCorrelation(correlations34, cutoff = 0.9)
@@ -260,7 +265,7 @@ highCorr34
 There is one variable recommended to be taken out. Let's see what they are. 
 
 ```{r}
-colnames(correlations34)[c(0)]
+colnames(correlations34)[c(14,12)]
 ```
 
 We ended up taking out NDWI_med, Blue_med, Red_med
@@ -283,7 +288,7 @@ kableExtra::kable(round(prop.table(table(Stream = pts34$copy_TWI_1)),3), caption
 First we want to bring in our point data and our covariates. 
 ```{r, eval=FALSE}
 library(sf)
-ptsSF34 <- st_as_sf(data34, coords = c("lon","lat"))
+ptsSF34 <- st_as_sf(data34, coords = c("utm1","utm2"))
 
 st_crs(ptsSF34) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 nrow(data34)
@@ -317,17 +322,37 @@ Finally, we can do a `kmeans` with a cluster of 20. This will be our small struc
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
 
-Mycluster34 <- kmeans(data34[,c(17,18)], (nrow(data34)/20)) 
+Mycluster80 <- kmeans(data34[,c(20,21)], (nrow(data34)/80)) 
 
 # add the new variable back to your dataframe here
-data34$spatial_cluster = Mycluster34$cluster
-ptsSF34$spatial_cluster = data34$spatial_cluster
+data34$spatial_cluster80 = Mycluster80$cluster
+
+ptsSF34$spatial_cluster80 = data34$spatial_cluster80
 ```
 
-Now you can see the clusters.  
+Now you can see the clusters and check the distribution
 
 ```{r, echo=FALSE, fig.align="center"}
 #just to visualize!
-plot(ptsSF34["spatial_cluster"]) 
+
+ggplot() + geom_sf(data = ptsSF34, aes(color = spatial_cluster80)) 
+
+#or
+
+data34 %>%
+ggplot(aes(lon,lat, color = spatial_cluster80)) +
+  geom_point() +
+  borders("state") + 
+  coord_map(xlim = c(-110, -125), ylim = c(44,49)) + 
+  theme_void()
+  
+
+data34 %>% count(spatial_cluster80) %>% map(., mean)
+
+data34 %>% count(spatial_cluster80) %>% map(., median)
+
+data34 %>% count(spatial_cluster80) %>% map(., sd)
+
+data34 %>% count(spatial_cluster80, sort = TRUE) %>% ggplot() + geom_col(aes(n, sort(spatial_cluster80))) + scale_x_continuous(breaks = seq(0,200,25))+ coord_flip() 
 ```
 
