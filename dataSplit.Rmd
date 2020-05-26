@@ -30,21 +30,8 @@ train <- data34[dat34index,]
 
 FeatureSelection <- data34[-dat34index,]
 
-FeatureSelectionSF <- st_as_sf(FeatureSelection, coords = c("lon","lat"))
-
-st_crs(FeatureSelectionSF) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
-
 
 ```
-
-Now check and see the final sanity check data. 
-```{r}
-plot(FeatureSelectionSF["stream"])
-```
-
-Looks good.
-
-
 
 Another important step in evaluating spatial data is accounting for spatial autocorrelation. We can do this by doing spatial cross validation where folds are created at random; however, when specified (i.e., HUCs, block, cluster) these folds are systematically seperated by k-folds [@roberts2017cross; @valavi2018blockcv]. This will help correct for any spatial autocorrelation in the validation process, which will lead to more realistic results [@meyer2018improving; @meyer2019importance]. The goal is to see how model performances react with different dependance structures. Hence finding a balance between 'too large' and 'too small.' Below we will use the `CAST` package to index these dependance structures. 
 
@@ -52,10 +39,18 @@ Another important step in evaluating spatial data is accounting for spatial auto
 library(CAST)
 
 set.seed(1234)
-indicesKsel <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster", k = 10)
+indicesKsel80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 10)
 
 set.seed(1234)
-indicesKtrain <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster", k = 10) 
+indicesKselLLO80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 120)
 
+set.seed(1234)
+indicesKtrain <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 10) 
+
+set.seed(1234)
+indicesKtrain80 <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 120) 
+
+set.seed(1234)
+indicesKtrainLLO80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 120)
 ```
 
