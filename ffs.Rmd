@@ -7,32 +7,14 @@ output: html_document
 
 ```{r setup, include=FALSE}
 
-load("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/workingThoughProject/workingthroughproj.RData")
-library(sp)
-library(rgdal)
-library(rgeos)
-library(raster)
-library(automap)
 library(caret)
 library(CAST)
-library(blockCV)
-library(tidyverse)
-library(gridExtra)
-library(reshape2)
-library(doParallel)
-library(parallel)
-library(mlbench)
-library(plotROC)
-library(pdp)
-library(vip)
-library(gridGraphics)
-library(grid)
+library(randomForest)
 ```
 
 #### FFS Random Forest
 
-So with the FFS we will just use the default parameters for both Random Forest and GBM. This shouldn't be too big of concern as I mentioned earlier. Kappa will still be the performance metric for selecting. First we need to prep the PCA variables before we do ffs. 
-
+So with the FFS we will just use the default parameters for Random Forest (e.g. mtry = 2, 4, 6 and ntrees = 500)
 ```{r, eval=FALSE}
 
 
@@ -42,123 +24,6 @@ responseRF <- trainsel$stream
 
 ```
 
-*FFS 12th HUC Random Forest*
-
-```{r eval=FALSE}
-#bring in cores
-cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
-registerDoParallel(cluster)
-
-#set up control
-ctrl12rf <- trainControl(method="repeatedcv",
-                     repeats = 5,number = 10,
-                     allowParallel = TRUE,
-                     returnResamp = "all", 
-                     verbose = FALSE, 
-                     index = indices12sel$index)
-
-set.seed(1234)
-ffs12rf.hw <- ffs(predictorsRF,responseRF, 
-  metric = "Kappa",
-  method = "rf",
-  minVar = 3, 
-  trControl = ctrl12rf)
-
-#now remove cluster. consistency...
-stopCluster(cluster)
-registerDoSEQ()
-
-```
-
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=6, fig.width=16}
-#now plot
-plot_ffsCust(ffs12rf.hw, size =4, pch = 19,lwd = .1) + ggtitle("FFS 12th HUC Random Forest Balanced")
-```
-
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=6, fig.width=10}
-
-plot_ffsCust(ffs12rf.hw,plotType = "selected", main = "FFS 12th HUC Random Forest Balanced",cex.axis=1.5, cex.lab=1.5)
-```
-
-
-
-*FFS BlockCV Medium Random Forest*
-
-```{r eval=FALSE}
-#bring in cores
-cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
-registerDoParallel(cluster)
-
-#set up control
-ctrlMedrf <- trainControl(method="repeatedcv",
-                     repeats = 5,number = 10,
-                     allowParallel = TRUE,
-                     returnResamp = "all", 
-                     verbose = FALSE, 
-                     index = indicesMedsel$index)
-
-#run
-set.seed(1234)
-ffsMedrf.hw <- ffs(predictorsRF,responseRF, 
-  metric = "Kappa",
-  method = "rf",
-  trControl = ctrlMedrf)
-
-#now remove cluster. consistency...
-stopCluster(cluster)
-registerDoSEQ()
-
-```
-
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=8, fig.width=16}
-#now plot
-plot_ffsCust(ffsMedrf.hw, size =4, pch = 19,lwd = .1) + ggtitle("FFS BlockCV Medium Random Forest Balanced")
-
-```
-
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=6, fig.width=20}
-
-plot_ffsCust(ffsMedrf.hw,plotType = "selected", main = "FFS BlockCV Medium Random Forest Balanced",cex.axis=1.5, cex.lab=1.5)
-```
-
-*FFS 14th HUC Random Forest*
-
-```{r eval=FALSE}
-#bring in cores
-cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
-registerDoParallel(cluster)
-
-#set up control
-ctrl14rf <- trainControl(method="repeatedcv",
-                     repeats = 5,number = 10,
-                     allowParallel = TRUE,
-                     returnResamp = "all", 
-                     verbose = FALSE, 
-                     index = indices14sel$index)
-
-#run
-set.seed(1234)
-ffs14rf.hw <- ffs(predictorsRF,responseRF, 
-  metric = "Kappa",
-  method = "rf",
-  trControl = ctrl14rf)
-
-blah
-#now remove cluster. consistency...
-stopCluster(cluster)
-registerDoSEQ()
-
-```
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=8, fig.width=16}
-#now plot
-plot_ffsCust(ffs14rf.hw, size =4, pch = 19,lwd = .1) + ggtitle("FFS 14th HUC Random Forest Balanced")
-
-```
-
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=6, fig.width=24}
-
-plot_ffsCust(ffs14rf.hw,plotType = "selected", main = "FFS 14th HUC Random Forest Balanced",cex.axis=1.5, cex.lab=1.5)
-```
 
 *FFS Kmeans Random Forest*
 
@@ -173,18 +38,14 @@ ctrlKrf <- trainControl(method="repeatedcv",
                      allowParallel = TRUE,
                      returnResamp = "all", 
                      verbose = FALSE, 
+                     classProbs = TRUE,
+                     summaryFunction = fourStats,
+                     savePredictions = 'all',
                      index = indicesKsel$index)
-#set up control for prevalence
-ctrlKprev <- trainControl(method="repeatedcv",
-                     repeats = 5,
-                     allowParallel = TRUE,
-                     returnResamp = "all", 
-                     verbose = FALSE, 
-                     index = indicesKselprev$index)
 #run
 set.seed(1234)
 ffsKrf.hw <- ffs(predictorsRF,responseRF, 
-  metric = "Kappa",
+  metric = "ROC",
   method = "rf",
   trControl = ctrlKrf)
 
@@ -193,13 +54,5 @@ ffsKrf.hw <- ffs(predictorsRF,responseRF,
 stopCluster(cluster)
 registerDoSEQ()
 ```
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=8, fig.width=16}
-#now plot
-plot_ffsCust(ffsKrf.hw, size =4, pch = 19,lwd = .1) + ggtitle("FFS Kmeans Random Forest Balanced")
-```
 
-```{r echo=FALSE, eval=TRUE, message=FALSE, fig.align='center', fig.height=6, fig.width=20}
-
-plot_ffsCust(ffsKrf,plotType = "selected", main = "FFS Kmeans Random Forest Balanced",cex.axis=1.5, cex.lab=1.5)
-```
 
