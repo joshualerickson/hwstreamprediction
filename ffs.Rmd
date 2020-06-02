@@ -18,36 +18,38 @@ So with the FFS we will just use the default parameters for Random Forest (e.g. 
 ```{r, eval=FALSE}
 
 
-predictorsRF <- trainsel[,c("twi30agg","tpi30agg","accum30","vv30agg", "vvsd30agg","npol30agg","ndvi30yrRS", "ndvias30agg", "ndwias30agg","nppmmid30agg","deficitRS","cad30RS","decid30RS","cpg30precip", "B2_30agg","B4_30agg","B8_30agg")]
+predictorsRF <- FeatureSelection[,c("twi30agg","tpi30agg","accum30","vv30agg", "vvsd30agg","npol30agg","NDVI_med", "nppmmid30agg","deficitRS","cad30RS","decid30RS","cpg30precip","Green_med","NIR_med")]
 
-responseRF <- trainsel$stream
+levels(FeatureSelection$stream) <- c("X0", "X1")
+
+responseRF <- FeatureSelection$stream
 
 ```
 
-
-*FFS Kmeans Random Forest*
+*FFS Kmeans Random Forest with clusters*
 
 ```{r eval=FALSE}
 #bring in cores
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
+
 #set up control
-ctrlKrf <- trainControl(method="repeatedcv",
+ctrlK80 <- trainControl(method="repeatedcv",
                      repeats = 5,number = 10,
                      allowParallel = TRUE,
                      returnResamp = "all", 
                      verbose = FALSE, 
                      classProbs = TRUE,
                      summaryFunction = fourStats,
-                     savePredictions = 'all',
-                     index = indicesKsel$index)
+                     index = indicesKsel80$index,
+                     savePredictions = 'all')
 #run
 set.seed(1234)
-ffsKrf.hw <- ffs(predictorsRF,responseRF, 
+ffsK80 <- ffs(predictorsRF,responseRF, 
   metric = "ROC",
   method = "rf",
-  trControl = ctrlKrf)
+  trControl = ctrlK80)
 
 
 #now remove cluster. consistency...
@@ -55,4 +57,77 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
+*now with a 80 cluster LLO*
+
+```{r eval=FALSE}
+#bring in cores
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+
+#set up control
+ctrlK_LLO80 <- trainControl(method="repeatedcv",
+                     repeats = 5,number = 120,
+                     allowParallel = TRUE,
+                     returnResamp = "all", 
+                     verbose = FALSE, 
+                     classProbs = TRUE,
+                     summaryFunction = fourStats,
+                     index = indicesKselLLO80$index,
+                     savePredictions = 'all')
+#run
+set.seed(1234)
+ffsK_LLO80 <- ffs(predictorsRF,responseRF, 
+  metric = "ROC",
+  method = "rf",
+  trControl = ctrlK_LLO80)
+ffsK_LLO80$selectedvars
+#now remove cluster. consistency...
+stopCluster(cluster)
+registerDoSEQ()
+```
+
+
+
+*FFS Kmeans Random Forest without spatial dependance structures*
+
+```{r eval=FALSE}
+#bring in cores
+cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
+registerDoParallel(cluster)
+
+
+#set up control
+ctrlK_noSD <- trainControl(method="repeatedcv",
+                     repeats = 5,number = 10,
+                     allowParallel = TRUE,
+                     returnResamp = "all", 
+                     verbose = FALSE, 
+                     classProbs = TRUE,
+                     summaryFunction = fourStats,
+                     savePredictions = 'all')
+#run
+set.seed(1234)
+ffsK_noSD <- ffs(predictorsRF,responseRF, 
+  metric = "ROC",
+  method = "rf",
+  trControl = ctrlK_noSD)
+
+
+#now remove cluster. consistency...
+stopCluster(cluster)
+registerDoSEQ()
+```
+
+
+```{r}
+
+ffsK_LLO80$selectedvars
+ffsK80$selectedvars
+ffsK_noSD$selectedvars
+
+FeatureSelection %>% count(spatial_cluster80, sort = TRUE) %>% 
+  ggplot() + geom_freqpoly(aes(n, ..density..), binwidth = 5)
+
+```
 
