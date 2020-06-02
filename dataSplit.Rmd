@@ -45,12 +45,10 @@ set.seed(1234)
 indicesKselLLO80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 120)
 
 set.seed(1234)
-indicesKtrain <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 10) 
+indicesKtrain80 <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 10) 
 
 set.seed(1234)
-indicesKtrain80 <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 120) 
+indicesKtrainLLO80 <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 120) 
 
-set.seed(1234)
-indicesKtrainLLO80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 120)
 ```
 
