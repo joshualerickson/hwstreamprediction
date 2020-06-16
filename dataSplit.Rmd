@@ -20,11 +20,14 @@ library(sf)
 
 ```{r, eval = FALSE}
 
+set.seed(1234)
 
+data34 <- downSample(data34, data34$stream)
 
 set.seed(1234)
 #split data into training and test data. 75% for training and validation. 25% for feature selection. 
 dat34index <- createDataPartition(data34$stream, list = FALSE, p=0.75)
+
 
 train <- data34[dat34index,]
 
@@ -43,6 +46,7 @@ indicesKsel80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_clus
 
 set.seed(1234)
 indicesKselLLO80 <- CreateSpacetimeFolds(FeatureSelection, spacevar = "spatial_cluster80", k = 120)
+
 
 set.seed(1234)
 indicesKtrain80 <- CreateSpacetimeFolds(train,spacevar = "spatial_cluster80", k = 10) 
