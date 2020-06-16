@@ -16,8 +16,6 @@ library(sf)
 
 **Model Splitting**  
 
- Above in the data splitting section I  proposed that we wanted to split the data into three partitions with the test data being the final model performance measure (sanity check). To do this we will split the data into two chunks and then split into test proportions once our final model is selected. This will hopefully give us a *natural* statistic into the final model performance. 
-
 ```{r, eval = FALSE}
 
 set.seed(1234)
