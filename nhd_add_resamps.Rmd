@@ -1,0 +1,260 @@
+---
+title: "nhdplus_add_in"
+author: "Josh Erickson"
+date: "June 10, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+Adding in the NHDPlus data with the resampled locations in the tuning process so we can compare metrics by resample. This is a lot of tedius work but ultimately getting the 'models' all together by CV method.
+
+
+
+```{r}
+#now get points from train data and extract
+trainPTS <- st_as_sf(train, coords = c("utm1","utm2"))
+
+st_crs(trainPTS) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
+
+#now give the 0's"X0" and the values "X1"
+train$NHDPlus <- ifelse(train$NHDPlus == 0, "X0", "X1")
+
+train$NHDPlus <- factor(train$NHDPlus)
+
+#now we have baseline data we can now run a confusion matrix on
+
+#now collect resample locations from each tuning process
+
+resamples.tune80 <-  Ktune80$pred %>% filter(mtry == 2, ntree == 600, threshold == 0.5)
+resamples.tuneLLO <-  KtuneLLO80$pred %>% filter(mtry == 2, ntree == 1600, threshold == 0.52)
+resamples.tunenoSD80 <-  KtunenoSD80$pred %>% filter(mtry == 3, ntree == 600, threshold == 0.5)
+
+KtunenoSD80$pred
+
+#add common identifier to training set
+train$X <- seq(1,6602,1)
+
+#now the resamples
+colnames(resamples.tune80)[2] <- "X"
+summary(resamples.tune80)
+
+#now join
+join_resamp80 <- left_join(resamples.tune80,train,  by = "X" )
+
+####  do for the others
+
+#now the other resamples
+colnames(resamples.tuneLLO)[2] <- "X"
+
+#now join
+join_resampLLO <- left_join(resamples.tuneLLO,train,    by = "X" )
+
+#more
+colnames(resamples.tunenoSD80)[2] <- "X"
+
+#now join
+join_resampnoSD80 <- left_join(resamples.tunenoSD80,train,  by = "X" )
+
+```
+
+
+
+```{r}
+nhdtune80 <- join_resamp80 %>% select(Resample, obs, pred, X0, NHDPlus)
+nhdtuneLLO <- join_resampLLO %>% select(Resample, obs, pred, X0, NHDPlus)
+nhdtunenoSD80 <- join_resampnoSD80 %>% select(Resample, obs, pred, X0, NHDPlus)
+
+summary(nhdtune80)
+#now we can run the stats on it.
+twoClassSummaryNHD <- function (data, lev = NULL, model = NULL) 
+{
+    rocObject <- pROC::roc(as.numeric(data$obs), as.numeric(data$NHDPlus))
+    
+    rocAUC <- rocObject$auc
+    
+    out <- c(rocAUC, sensitivity(data[, "NHDPlus"], data[, "obs"], 
+        lev[1]), specificity(data[, "NHDPlus"], data[, "obs"], lev[2]))
+    names(out) <- c("ROC", "Sens", "Spec")
+    out
+}
+fourStatsNhdtune <-  function(dat) {
+  out <- c(twoClassSummaryNHD(dat, lev = levels(dat$obs), model = NULL))
+  tab <- caret::confusionMatrix(dat$NHDPlus, dat$obs,
+                                positive = levels(dat$obs)[1])
+  res <- c(tab$byClass, tab$overall[c("Accuracy", "Kappa")])
+  res <- c(res,
+           res["Sensitivity"] + res["Specificity"] - 1,
+           sqrt((res["Sensitivity"] - 1) ^ 2 + (res["Specificity"] - 1) ^ 2))
+  names(res)[-seq_len(length(res) - 2)] <- c("J", "Dist")
+  list(out,res)
+  
+}
+
+blah <- nhdtune80 %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
+
+blah_names <- data.frame(Resample = names(blah))
+
+blah <- blah %>% map_df(unlist)
+
+blah <- cbind(blah_names, blah)
+
+blah <- blah %>% pivot_longer(-Resample, names_to = "Metric")
+
+blah$Metric<- paste0("NHDPlus~",blah$Metric)
+
+blah<- blah %>% pivot_wider(names_from = "Metric")
+
+resamps <- resamples(list(
+                          Topoclimatic = Ktune80,
+                          TopoOnly = Ktune80_topo))
+
+resamps$values <- plyr::join(blah, resamps$values, by = "Resample")
+
+resamps$methods$NHDPlus <- "custom"
+
+resamps$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
+
+summary(resamps, resamples = "final", metric = "ROC")
+```
+```{r}
+
+plotting_80 <- resamps$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
+
+temp <- strsplit(plotting_80$Metric, "~")
+
+mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
+df <- as.data.frame(mat)
+
+plotting_80 <- cbind(plotting_80[,c(1,3)], df)
+colnames(plotting_80)[3] <- "model"
+colnames(plotting_80)[4] <- "metric"
+
+
+```
+
+
+Now for the LLO
+
+
+```{r}
+
+fourStatsLLOtune <-  function(dat) {
+  tab <- caret::confusionMatrix(dat$NHDPlus, dat$obs,
+                                positive = levels(dat$obs)[1])
+  res <- c(tab$byClass, tab$overall[c("Accuracy", "Kappa")])
+  res <- c(res,
+           res["Sensitivity"] + res["Specificity"] - 1,
+           sqrt((res["Sensitivity"] - 1) ^ 2 + (res["Specificity"] - 1) ^ 2))
+  names(res)[-seq_len(length(res) - 2)] <- c("J", "Dist")
+  list(res)
+  
+}
+
+blah2 <- nhdtuneLLO %>% base::split(.$Resample) %>% map(fourStatsLLOtune)
+
+blah_names2 <- data.frame(Resample = names(blah2))
+
+blah2 <- blah2 %>% map_df(unlist)
+
+blah2 <- cbind(blah_names2, blah2)
+
+blah2 <- blah2 %>% pivot_longer(-Resample, names_to = "Metric")
+
+blah2$Metric<- paste0("NHDPlus~",blah2$Metric)
+
+blah2<- blah2 %>% pivot_wider(names_from = "Metric")
+
+resampsLLO <- resamples(list(
+                          Topoclimatic = KtuneLLO80,
+                          TopoOnly = KtuneLLO80_topo))
+
+resampsLLO$values <- plyr::join(blah2, resampsLLO$values, by = "Resample")
+
+resampsLLO$methods$NHDPlus <- "custom"
+
+resampsLLO$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
+
+summary(resampsLLO, resamples = "final", metric = "ROC")
+
+```
+
+
+```{r}
+densityplot(resampsLLO, metric = "ROC", na.rm = TRUE)
+```
+
+
+```{r}
+
+LLO_plotting <- resampsLLO$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
+
+temp <- strsplit(LLO_plotting$Metric, "~")
+
+mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
+df <- as.data.frame(mat)
+
+LLO_plotting<- cbind(LLO_plotting[,c(1,3)], df)
+colnames(LLO_plotting)[3] <- "model"
+colnames(LLO_plotting)[4] <- "metric"
+
+
+```
+
+
+
+```{r}
+
+
+blah3 <- nhdtunenoSD80 %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
+
+blah_names3 <- data.frame(Resample = names(blah3))
+
+blah3 <- blah3 %>% map_df(unlist)
+
+blah3 <- cbind(blah_names3, blah3)
+
+blah3 <- blah3 %>% pivot_longer(-Resample, names_to = "Metric")
+
+blah3$Metric<- paste0("NHDPlus~",blah3$Metric)
+
+blah3<- blah3 %>% pivot_wider(names_from = "Metric")
+
+resampsnoSD <- resamples(list(
+                          Topoclimatic = KtunenoSD80,
+                          TopoOnly = KtunenoSD80_topo))
+
+resampsnoSD$values <- plyr::join(blah3, resampsnoSD$values, by = "Resample")
+
+resampsnoSD$methods$NHDPlus <- "custom"
+
+resampsnoSD$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
+
+summary(resampsnoSD, resamples = "final", metric = "ROC")
+
+```
+
+
+```{r}
+densityplot(resamps, metric = "ROC", na.rm = TRUE)
+```
+
+
+```{r}
+
+noSD_plotting <- resampsnoSD$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
+
+temp <- strsplit(noSD_plotting$Metric, "~")
+
+mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
+df <- as.data.frame(mat)
+
+noSD_plotting<- cbind(noSD_plotting[,c(1,3)], df)
+colnames(noSD_plotting)[3] <- "model"
+colnames(noSD_plotting)[4] <- "metric"
+
+
+```
+
