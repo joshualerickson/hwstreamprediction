@@ -315,7 +315,7 @@ plot(sac34)
 
 
 
-Finally, we can do a `kmeans` with a cluster of 20. This will be our small structure attempt.
+Finally, we can do a `kmeans` with a cluster of 80. This will be our small structure attempt.
 
 ```{r eval = FALSE}
 #this is the k-means method (using a cluster of 20)
@@ -352,7 +352,5 @@ data34 %>% count(spatial_cluster80) %>% map(., mean)
 data34 %>% count(spatial_cluster80) %>% map(., median)
 
 data34 %>% count(spatial_cluster80) %>% map(., sd)
-
-data34 %>% count(spatial_cluster80, sort = TRUE) %>% ggplot() + geom_col(aes(n, sort(spatial_cluster80))) + scale_x_continuous(breaks = seq(0,200,25))+ coord_flip() 
 ```
 
