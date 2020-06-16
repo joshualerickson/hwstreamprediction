@@ -12,7 +12,6 @@ knitr::opts_chunk$set(echo = TRUE)
 Adding in the NHDPlus data with the resampled locations in the tuning process so we can compare metrics by resample. This is a lot of tedius work but ultimately getting the 'models' all together by CV method.
 
 
-
 ```{r}
 #now get points from train data and extract
 trainPTS <- st_as_sf(train, coords = c("utm1","utm2"))
@@ -24,7 +23,7 @@ train$NHDPlus <- ifelse(train$NHDPlus == 0, "X0", "X1")
 
 train$NHDPlus <- factor(train$NHDPlus)
 
-#now we have baseline data we can now run a confusion matrix on
+#now we have baseline data associated with the points used in the models
 
 #now collect resample locations from each tuning process
 
@@ -32,27 +31,24 @@ resamples.tune80 <-  Ktune80$pred %>% filter(mtry == 2, ntree == 600, threshold 
 resamples.tuneLLO <-  KtuneLLO80$pred %>% filter(mtry == 2, ntree == 1600, threshold == 0.52)
 resamples.tunenoSD80 <-  KtunenoSD80$pred %>% filter(mtry == 3, ntree == 600, threshold == 0.5)
 
-KtunenoSD80$pred
-
 #add common identifier to training set
 train$X <- seq(1,6602,1)
 
 #now the resamples
 colnames(resamples.tune80)[2] <- "X"
-summary(resamples.tune80)
 
-#now join
+#now join for the CV80
 join_resamp80 <- left_join(resamples.tune80,train,  by = "X" )
 
-####  do for the others
+####  do for the others ###
 
-#now the other resamples
+#now for the LLOCV
 colnames(resamples.tuneLLO)[2] <- "X"
 
 #now join
 join_resampLLO <- left_join(resamples.tuneLLO,train,    by = "X" )
 
-#more
+#now the no spatial dependance "SD80"
 colnames(resamples.tunenoSD80)[2] <- "X"
 
 #now join
@@ -60,14 +56,18 @@ join_resampnoSD80 <- left_join(resamples.tunenoSD80,train,  by = "X" )
 
 ```
 
-
+Now we can select the resampled prediction, observations, NHDPlus and resample id.
 
 ```{r}
 nhdtune80 <- join_resamp80 %>% select(Resample, obs, pred, X0, NHDPlus)
 nhdtuneLLO <- join_resampLLO %>% select(Resample, obs, pred, X0, NHDPlus)
 nhdtunenoSD80 <- join_resampnoSD80 %>% select(Resample, obs, pred, X0, NHDPlus)
+```
 
-summary(nhdtune80)
+Now this allows us to run summary statistics on each of the model types, including the NHDPlus response.
+
+```{r}
+#create a function to capture the NHDPlus summary stats
 #now we can run the stats on it.
 twoClassSummaryNHD <- function (data, lev = NULL, model = NULL) 
 {
@@ -92,6 +92,12 @@ fourStatsNhdtune <-  function(dat) {
   list(out,res)
   
 }
+```
+
+Now we can run the summary stats on each Resample (group).
+
+```{r}
+
 
 blah <- nhdtune80 %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
 
@@ -107,9 +113,14 @@ blah$Metric<- paste0("NHDPlus~",blah$Metric)
 
 blah<- blah %>% pivot_wider(names_from = "Metric")
 
+#the resamples function does the same thing but doesn't handle 'non-caret' objects
+#thus we only use the models we used caret on.
+
 resamps <- resamples(list(
                           Topoclimatic = Ktune80,
                           TopoOnly = Ktune80_topo))
+
+#now we can join the NHDPlus results with the topoclimatic and topo-only models
 
 resamps$values <- plyr::join(blah, resamps$values, by = "Resample")
 
@@ -119,6 +130,9 @@ resamps$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
 
 summary(resamps, resamples = "final", metric = "ROC")
 ```
+
+Now we can create a long data frame and clean up the joining we did above. This will make it easier to plot.
+
 ```{r}
 
 plotting_80 <- resamps$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
@@ -136,7 +150,7 @@ colnames(plotting_80)[4] <- "metric"
 ```
 
 
-Now for the LLO
+Now do the same for the LLO, except we won't use twoSummarystats function due to ROC being finicky with insufficient values, i.e. LLO is prone to this since you're only testing with minimal data.
 
 
 ```{r}
@@ -181,11 +195,7 @@ summary(resampsLLO, resamples = "final", metric = "ROC")
 
 ```
 
-
-```{r}
-densityplot(resampsLLO, metric = "ROC", na.rm = TRUE)
-```
-
+Now clean up LLO for plotting.
 
 ```{r}
 
@@ -203,6 +213,8 @@ colnames(LLO_plotting)[4] <- "metric"
 
 ```
 
+
+Now we can do the final join of NHDPlus and the models. This will be for the random CV with no dependance structure.
 
 
 ```{r}
@@ -236,11 +248,7 @@ summary(resampsnoSD, resamples = "final", metric = "ROC")
 
 ```
 
-
-```{r}
-densityplot(resamps, metric = "ROC", na.rm = TRUE)
-```
-
+And, clean up for plotting.
 
 ```{r}
 
