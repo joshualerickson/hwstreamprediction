@@ -68,6 +68,11 @@ practice2 <- rename(practice2, id = "value", Id80group = "L1")
 
 practice <- data34 %>% inner_join(practice, by = "id") %>% inner_join(practice2, by = "id")
 
-practice %>% add_count(Id40group, name = "n_40") %>% add_count(Id80group, name = "n_80") %>% add_count(sb_med, name = "n_med") %>% summarise(across(starts_with("n_"), list(mean = mean, median = median, standard_deviation = sd))) %>% t()
+practice %>% add_count(Id40group, name = "n_40") %>% add_count(Id80group, name = "n_80") %>% add_count(sb_med, name = "n_med") %>% summarise(across(starts_with("n_"), list(mean = mean, median = median, standard_deviation = sd, spread = ~max(.x)-min(.x)))) %>% t()
+
+
 
 ```
+
+
+Notice how the spread between the groups increases as the dependance structure increases.
