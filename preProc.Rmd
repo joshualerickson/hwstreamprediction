@@ -315,10 +315,10 @@ plot(sac34)
 
 
 
-Finally, we can do a `kmeans` with a cluster of 80. This will be our small structure attempt.
+Finally, we can do a `kmeans` with a cluster of 80. This will be our large structure attempt.
 
 ```{r eval = FALSE}
-#this is the k-means method (using a cluster of 20)
+#this is the k-means method (using a cluster of 80)
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
 
@@ -330,6 +330,20 @@ data34$spatial_cluster80 = Mycluster80$cluster
 ptsSF34$spatial_cluster80 = data34$spatial_cluster80
 ```
 
+now we can do a `kmeans` with a cluster of 40. This will be our small structure attempt.
+
+
+```{r eval = FALSE}
+#this is the k-means method (using a cluster of 40)
+#need coordinates.
+#remember to use the coordinates, that's why we've kept them!
+
+Mycluster40 <- kmeans(data34[,c(20,21)], (nrow(data34)/40)) 
+
+# add the new variable back to your dataframe here
+data34$spatial_cluster40 = Mycluster40$cluster
+```
+
 Now you can see the clusters and check the distribution
 
 ```{r, echo=FALSE, fig.align="center"}
@@ -338,19 +352,26 @@ Now you can see the clusters and check the distribution
 ggplot() + geom_sf(data = ptsSF34, aes(color = spatial_cluster80)) 
 
 #or
-
+data34 <- data34[,-c(25,27)]
 data34 %>%
 ggplot(aes(lon,lat, color = spatial_cluster80)) +
   geom_point() +
   borders("state") + 
   coord_map(xlim = c(-110, -125), ylim = c(44,49)) + 
   theme_void()
-  
 
-data34 %>% count(spatial_cluster80) %>% map(., mean)
 
-data34 %>% count(spatial_cluster80) %>% map(., median)
+data34 %>% count(spatial_cluster80) %>% map_dbl(mean)
 
-data34 %>% count(spatial_cluster80) %>% map(., sd)
+data34 %>% count(spatial_cluster80) %>% map_dbl(median)
+
+data34 %>% count(spatial_cluster80) %>% map_dbl(sd)
+
+
+data34 %>% count(spatial_cluster40) %>% map_dbl(mean)
+
+data34 %>% count(spatial_cluster40) %>% map_dbl(median)
+
+data34 %>% count(spatial_cluster40) %>% map_dbl(sd)
 ```
 
