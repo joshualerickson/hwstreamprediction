@@ -11,6 +11,8 @@ library(caret)
 library(CAST)
 library(randomForest)
 library(tidyverse)
+library(doParallel)
+library(parallel)
 ```
 
 #### FFS Random Forest
