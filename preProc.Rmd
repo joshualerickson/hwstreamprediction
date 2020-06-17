@@ -352,7 +352,7 @@ Now you can see the clusters and check the distribution
 ggplot() + geom_sf(data = ptsSF34, aes(color = spatial_cluster80)) 
 
 #or
-data34 <- data34[,-c(25,27)]
+
 data34 %>%
 ggplot(aes(lon,lat, color = spatial_cluster80)) +
   geom_point() +
@@ -360,18 +360,7 @@ ggplot(aes(lon,lat, color = spatial_cluster80)) +
   coord_map(xlim = c(-110, -125), ylim = c(44,49)) + 
   theme_void()
 
+data34 %>% add_count(spatial_cluster40, name = "n_40") %>% add_count(spatial_cluster80, name = "n_80") %>% summarise(across(starts_with("n_"), list(mean = mean, median = median, standard_deviation = sd))) %>% t()
 
-data34 %>% count(spatial_cluster80) %>% map_dbl(mean)
-
-data34 %>% count(spatial_cluster80) %>% map_dbl(median)
-
-data34 %>% count(spatial_cluster80) %>% map_dbl(sd)
-
-
-data34 %>% count(spatial_cluster40) %>% map_dbl(mean)
-
-data34 %>% count(spatial_cluster40) %>% map_dbl(median)
-
-data34 %>% count(spatial_cluster40) %>% map_dbl(sd)
 ```
 
