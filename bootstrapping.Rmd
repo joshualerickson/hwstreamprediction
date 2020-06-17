@@ -1,0 +1,111 @@
+---
+title: "Untitled"
+author: "Josh Erickson"
+date: "June 11, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(modelr)
+library(infer)
+```
+
+Now we will bootstrap all the resamples to get 95%  confidence intervals of the bootsrapped distribution. 
+
+
+```{r}
+
+final_resamp80_means <- plotting_80 %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
+         group_by(model,metric) %>% 
+         nest %>% 
+         mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
+                                 pull('strap') %>% 
+                                 map_dbl(~ as_tibble(.x) %>% 
+                                          pull('value') %>%
+                                          mean))) %>% select(metric,model, boot) %>% unnest(boot)
+
+
+```
+
+Now do it for the 40 cluster.
+
+```{r}
+final_resamp40_means <- plotting_40 %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
+         group_by(model,metric) %>% 
+         nest %>% 
+         mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
+                                 pull('strap') %>% 
+                                 map_dbl(~ as_tibble(.x) %>% 
+                                          pull('value') %>%
+                                          mean))) %>% select(metric,model, boot) %>% unnest(boot)
+
+
+```
+
+Now for the random CV
+
+```{r}
+final_resampnoSD_means <- noSD_plotting %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
+         group_by(model,metric) %>% 
+         nest %>% 
+         mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
+                                 pull('strap') %>% 
+                                 map_dbl(~ as_tibble(.x) %>% 
+                                          pull('value') %>%
+                                          mean))) %>% select(metric,model, boot) %>% unnest(boot)
+
+
+```
+
+Now calculate the 95% confidence interval using both percentile and standard error methods. Use the function below for summarizing.
+
+
+```{r}
+
+ci.resamp80se <- final_resamp80_means %>% rename(stat = "boot") %>% mutate(point_estimate = mean(stat, na.rm = TRUE)) %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) %>% slice(1) 
+
+#and
+
+ci.resamp80per <- final_resamp80_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
+
+
+```
+
+
+```{r}
+final_resampLLO_straps %>% filter(metric %in% c("J","Kappa", "Accuracy"))  %>% slice(1:18000) %>% ggplot() + geom_density(aes(boot, color = model),size = 1, adjust = 3) + labs(x = "", title = "Leave Location Out (80 cluster) - 10 folds") + geom_rug(aes(boot, color = model)) +  expand_limits(x = c(0,1)) + facet_wrap(~metric, scales = "free_y") 
+
+```
+
+Now for 40 cluster 
+
+```{r}
+
+ci.resamp40se <- final_resamp40_means %>% rename(stat = "boot") %>% mutate(point_estimate = mean(stat, na.rm = TRUE)) %>% group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals)
+
+#and
+
+ci.resamp40per <- final_resamp40_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
+
+```
+
+```{r}
+g2 <- LLO_plotting %>% filter(metric %in% c("J","Kappa", "Accuracy")) %>%  na.omit() %>% ggplot() + geom_density(aes(value, color = model), size = 1.5, adjust = 10, show.legend = FALSE) + labs(x = "", title = "Leave One Out (80 cluster) - 120 folds") + geom_vline(data = final_resampLLO_strap2 %>% filter(metric %in% c("J","Kappa", "Accuracy")), aes(xintercept = smean, color = model, linetype = ""), show.legend = FALSE) + scale_linetype_manual(name = "Bootstrap Mean", values = 2)+ facet_wrap(~metric, scales = "free_x")
+```
+
+
+```{r}
+
+ci.resampnoSDse <- final_resampnoSD_means %>% rename(stat = "boot") %>% mutate(point_estimate = mean(stat, na.rm = TRUE)) %>% group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals)
+
+#and
+
+ci.resampnoSDper <- final_resampnoSD_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
+
+```
+
+```{r}
+g3 <- noSD_plotting %>% filter(metric %in% c("J","Kappa", "Accuracy")) %>%  na.omit() %>% ggplot() + geom_density(aes(value, color = model), size = 1.5, adjust = 10) + labs(x = "Resampled Values", title = "Random CV - 10 folds") + geom_vline(data = final_resampnoSD_strap2 %>% filter(metric %in% c("J","Kappa", "Accuracy")), aes(xintercept = smean, color = model, linetype = "")) + scale_linetype_manual(name = "Bootstrap Mean", values = 2) + facet_wrap(~metric, scales = "free_x")
+```
+
