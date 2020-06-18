@@ -18,8 +18,10 @@ library(sf)
 
 ```{r, eval = FALSE}
 
+data34 <- read_csv("data34.csv") %>% mutate(across(is.character, factor)) 
 
 set.seed(1234)
+
 #split data into training and test data. 75% for training and validation. 25% for feature selection. 
 dat34index <- createDataPartition(data34$stream, list = FALSE, p=0.75)
 
