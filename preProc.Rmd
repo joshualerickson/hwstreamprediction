@@ -387,6 +387,9 @@ Now add the spatial block medium.
 data34$sb_med <- Spatial_Med34$foldID
 ```
 
+```{r}
+write_csv(data34, "data34.csv")
+```
 
 Now you can see the clusters and check the distribution. This is completely fair to the sb_med since we haven't added the folds to the clusters. We'll do that again in the dataSplit.Rmd file.
 
