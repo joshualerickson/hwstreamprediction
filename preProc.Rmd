@@ -12,14 +12,13 @@ library(raster)
 library(caret)
 library(CAST)
 library(blockCV)
-library(tidyverse)
 library(nhdplusTools)
 library(corrplot)
-
+library(tidyverse)
 ```
 
 **Now bring in all the TIFs to be used in the anlaysis and stack/visualise.**
-```{r, eval = FALSE}
+```{r}
 library(raster)
 
 
@@ -64,7 +63,7 @@ topo_opt_rad34 <- stack(twi30, tpi30, accum30,vv30, vvsd30, npol30,  NDVI, NDWI,
 ```
 
 
-```{r, eval=TRUE}
+```{r, eval=FALSE}
 
 plot(topo_opt_rad34, maxnl=32, nc = 4, legend = FALSE)
 
@@ -74,7 +73,7 @@ plot(topo_opt_rad34, maxnl=32, nc = 4, legend = FALSE)
 
 Bring in the points collected in the field.
 
-```{r, eval = TRUE}
+```{r}
 
 #combine point objects
 proj.study <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
@@ -93,7 +92,7 @@ pts34 <- pts34[,c(2)]
 
 
 Now bring in the applicable polygons for clipping, etc.
-```{r, eval=FALSE}
+```{r}
 lands_folder <- "D:/documents/Documents/Josh/Documents/GIS/District_H20_exports/Lands_District_stuff"
 
 #Get forest service boundary
@@ -120,28 +119,36 @@ plot(FSland)
 
 Now we'll need to bring in the NHDPlus layer and then rasterize so that we can get NHDPlus baseline data.
 
-```{r}
+```{r, eval=FALSE}
 
-download_dir <- download_nhdplushr(nhd_dir = getwd(), c("1701"))
+##download_dir <- download_nhdplushr(nhd_dir = getwd(), c("1701"))
+
 nhdPlushr <- get_nhdplushr(getwd(), "nhdplus.gpkg",
 layers = "NHDFlowline", overwrite = TRUE, proj = "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
 nhdDistrict <- nhdPlushr$NHDFlowline
+
 nhdDistrict <- st_transform(nhdDistrict, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
 nhdDistrict <- st_crop(nhdDistrict, c(xmin = 150035.8, xmax = 222365.8, 
                                       ymin = 507390, ymax = 574500 ))
+
 plot(nhdDistrict["StreamOrde"], main = "NHDPlus High Res with Stream Order")
 
 nhdDistrictSF <- st_as_sf(nhdDistrict)
 st_write(nhdDistrictSF, "hw_study.gpkg", "nhdDistrictSF")
+```
 
+```{r}
 nhdDistrictSF <- st_read("hw_study.gpkg", "nhdDistrictSF")
 #now make a 30m raster with streamorder
 
 ndhStrOrdRast <- rasterize(nhdDistrict, tpi30, field = "StreamOrde")
 
-writeRaster(ndhStrOrdRast, "nhdStrOrdRast.tiff")
+writeRaster(ndhStrOrdRast, "nhdStrOrdRast.tiff", overwrite = TRUE)
 
 nhdStrOrdRast <- raster("nhdStrOrdRast.tif")
+
 ```
 
 Now check some stats for the sample area real quick.
@@ -188,7 +195,7 @@ top34.opt.rad <- data.frame(cbind(top34.opt.rad,top34coords, top34lonlat))
 write.csv(top34.opt.rad, file = "top34.opt.rad.csv")
 ```
 
-```{r, eval=FALSE}
+```{r}
 top34.opt.rad <- read.csv("top34.opt.rad.csv", header = TRUE)[-1]
 
 data34 <- top34.opt.rad #change for ease
@@ -215,7 +222,9 @@ write.csv(data34, file = "data34.csv")
 
 ```{r}
 data34 <- read_csv("data34.csv")[-1]
+
 summary(data34)
+
 data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% gather(key, value) %>% ggplot() + geom_boxplot(aes(value, color = key)) + coord_flip()
 
 
@@ -234,7 +243,7 @@ data34 %>% mutate(accum30 = log(accum30)) %>% select(npol30agg, accum30) %>% gat
 ```
 
 
-```{r eval=FALSE}
+```{r}
 data34 <- data34 %>% filter(npol30agg > -1, npol30agg < 1)
 ```
 
@@ -266,7 +275,7 @@ colnames(correlations34)[c(13,15,7)]
 ```
 
 We ended up taking out NDWI_med instead of NDVI_med along with Blue_med and Red_med.
-```{r eval=FALSE}
+```{r}
 data34 <- data34[, -which(names(data34) %in% c("NDWI_med", "Blue_med", "Red_med"))]
 
 ```
@@ -308,7 +317,7 @@ barplot(prop.table(table(data34$stream)),
 ```
 
 Now we want to bring in our point data along with our covariates and clean up all the preprocessing we did. 
-```{r, eval=FALSE}
+```{r}
 
 data34 <- read_csv("data34.csv")
 
@@ -325,7 +334,7 @@ crs(topo_new34) <- proj.study
 
 Now we can figure out our 'effictive range of spatial autocorrelation' by using the function `spatialAutoRange` in `blockCV`. This is a cool function because it takes the covariates, calculates the range of autocorrelation (from $n$ sampled points), and then produces two plots showing the range of the covariates and the recommended block size for validation.  
 
-```{r eval=FALSE}
+```{r}
 
 sac34 <- blockCV::spatialAutoRange(rasterLayer = topo_new34,
                                  sampleNumber = 5000,
@@ -334,7 +343,7 @@ sac34 <- blockCV::spatialAutoRange(rasterLayer = topo_new34,
 
 ```
 
-```{r eval=FALSE}
+```{r}
 
 Spatial_Med34 <- blockCV::spatialBlock(speciesData = ptsSF34, # presence-background data
                     species = "stream",
@@ -351,7 +360,7 @@ We noticed though that when doing this type of blocking strategy the standard de
 
 Finally, we can do a `kmeans` with a cluster of 80. This will be our large structure attempt.
 
-```{r eval = FALSE}
+```{r}
 #this is the k-means method (using a cluster of 80)
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
@@ -368,7 +377,7 @@ ptsSF34$spatial_cluster80 = data34$spatial_cluster80
 now we can do a `kmeans` with a cluster of 40. This will be our small structure attempt.
 
 
-```{r eval = FALSE}
+```{r}
 #this is the k-means method (using a cluster of 40)
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
