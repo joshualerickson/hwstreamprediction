@@ -80,7 +80,7 @@ library(recipes)
 ffsK_40$selectedvars
 
 rec_tune40 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-tpi30agg,-npol30agg, -NDVI_med, -deficitRS, -vv30agg, -cad30RS, -cpg30precip, -nppmmid30agg, -decid30RS, -vvsd30agg, new_role = "bring along")
+  update_role(-stream,-accum30,-tpi30agg,-NDVI_med, -deficitRS, -vv30agg, -nppmmid30agg, -decid30RS, new_role = "bring along")
 
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
@@ -90,7 +90,7 @@ set.seed(1234)
 Ktune40 <- train(rec_tune40, data = train,
               method = thresh_code,
               metric = "J",
-              tuneGrid = expand.grid(mtry = 2:10,ntree=seq(400,2000,200),
+              tuneGrid = expand.grid(mtry = 2:6,ntree=seq(400,2000,200),
                                      threshold = seq(.4,.6,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
