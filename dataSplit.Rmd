@@ -6,10 +6,11 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-
+library(reshape2)
 library(caret)
 library(CAST)
 library(sf)
+library(tidyverse)
 ```
 
 ## Model Selection  
@@ -18,7 +19,7 @@ library(sf)
 
 ```{r, eval = FALSE}
 
-data34 <- read_csv("data34.csv") %>% mutate(across(is.character, factor)) 
+data34 <- read_csv("data34.csv") %>% mutate(across(where(is.character), factor))
 
 set.seed(1234)
 
@@ -66,6 +67,7 @@ foldId80 <- CreateSpacetimeFolds(data34,spacevar = "spatial_cluster80", k = 10)
 
 practice <- melt(foldId40$indexOut)
 practice2 <- melt(foldId80$indexOut)
+
 practice <- rename(practice, id = "value", Id40group = "L1")
 
 practice2 <- rename(practice2, id = "value", Id80group = "L1")
