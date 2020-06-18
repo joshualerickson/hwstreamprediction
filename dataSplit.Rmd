@@ -31,6 +31,8 @@ train <- data34[dat34index,]
 FeatureSelection <- data34[-dat34index,]
 
 
+write_csv(train, "train.csv")
+write_csv(FeatureSelection, "FeatureSelection.csv")
 ```
 
 Another important step in evaluating spatial data is accounting for spatial autocorrelation. We can do this by doing spatial cross validation where folds are created at random; however, when specified (i.e., HUCs, block, cluster) these folds are systematically seperated by k-folds [@roberts2017cross; @valavi2018blockcv]. This will help correct for any spatial autocorrelation in the validation process, which will lead to more realistic results [@meyer2018improving; @meyer2019importance]. The goal is to see how model performances react with different dependance structures. Hence finding a balance between 'too large' and 'too small.' Below we will use the `CAST` package to index these dependance structures. 
