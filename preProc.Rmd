@@ -148,7 +148,7 @@ Now check some stats for the sample area real quick.
 
 ```{r}
 #sample space area sq/km
-area_sum <- sum(st_area(FSland$geom))
+area_sum <- sum(st_area(FSland$geometry))
 
 area_km <- area_sum/1000000
 
@@ -296,7 +296,7 @@ set.seed(1234)
 data34 <- downSample(data34, data34$stream)
 
 
-write_csv(data34, "data34.csv", append = TRUE)
+write_csv(data34, "data34.csv", append = FALSE)
 ```
 
 ```{r, out.width= "70%", fig.align='center', message=FALSE}
@@ -309,6 +309,8 @@ barplot(prop.table(table(data34$stream)),
 
 Now we want to bring in our point data along with our covariates and clean up all the preprocessing we did. 
 ```{r, eval=FALSE}
+
+data34 <- read_csv("data34.csv")
 
 ptsSF34 <- st_as_sf(data34, coords = c("utm1","utm2"))
 
@@ -353,7 +355,8 @@ Finally, we can do a `kmeans` with a cluster of 80. This will be our large struc
 #this is the k-means method (using a cluster of 80)
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
-data34 <- data34[,-21]
+data34 <- data34[,-21] #take out the class added when we downsampled
+write_csv(data34, "data34.csv")
 Mycluster80 <- kmeans(data34[,c(17,18)], (nrow(data34)/80)) 
 
 # add the new variable back to your dataframe here
