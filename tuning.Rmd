@@ -6,38 +6,39 @@ output: html_document
 ---
 
 ```{r setup, include=FALSE}
-library(sp)
-library(sf)
-library(rgdal)
-library(rgeos)
-library(raster)
-library(automap)
 library(caret)
 library(CAST)
-
+library(recipes)
+library(tidyverse)
+library(doParallel)
+library(parallel)
 ```
 
 Now tune the variables from the feature selection.
 
+```{r}
+train <- read_csv("train.csv") %>% mutate(across(where(is.character), factor))
+```
+
+After you run the ffs you just need the feature selections; if you want to save space you can just keep the names and delete the ffs models.
+
+```{r, eval = FALSE}
+ffsK80_names <- ffsK80$selectedvars
+
+ffsK40_names <- ffsK_40$selectedvars
+install.packages("assertive.base")
+
+ffsKnoSD_names <- ffsK_noSD$selectedvars
+```
+
+
 
 Kmeans Random Forest Tune ffs
 
-```{r, eval=FALSE}
-
-
-ffsK80$selectedvars
-
-levels(train$stream) <- c("X0", "X1")
-
-library(recipes)
+```{r}
 
 rec_Ktune80 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-tpi30agg,-vv30agg,
-              -nppmmid30agg, -deficitRS, -decid30RS, -NDVI_med, new_role = "bring along")
-
-
-
-
+  update_role(-stream,-ffsK80_names, new_role = "bring along")
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
@@ -47,7 +48,7 @@ Ktune80 <- train(rec_Ktune80, data = train,
               method = thresh_code,
               metric = "J",
               tuneGrid = expand.grid(mtry = 2:6,ntree=seq(400,2000,200),
-                                     threshold = seq(.40,.60,.02)),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -60,27 +61,12 @@ registerDoSEQ()
 
 ```
 
-```{r echo=FALSE, message=FALSE, fig.align='center', fig.height=16, fig.width=13}
-
-confusionMatrix(Ktune80,norm = "none")
-
-Ktune80$finalModel$confusion
-
-results <- Ktune80$results 
-results %>% filter(mtry == 2, ntree == 600, threshold == 0.5)
-```
-
 Now just run a 40 cluster model; ffs
 
 ```{r}
 
-
-library(recipes)
-
-ffsK_40$selectedvars
-
 rec_tune40 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-tpi30agg,-NDVI_med, -deficitRS, -vv30agg, -nppmmid30agg, -decid30RS, new_role = "bring along")
+  update_role(-stream,-ffsK40_names, new_role = "bring along")
 
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
@@ -90,8 +76,8 @@ set.seed(1234)
 Ktune40 <- train(rec_tune40, data = train,
               method = thresh_code,
               metric = "J",
-              tuneGrid = expand.grid(mtry = 2:6,ntree=seq(400,2000,200),
-                                     threshold = seq(.4,.6,.02)),
+              tuneGrid = expand.grid(mtry = 2:8,ntree=seq(400,2000,200),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -101,35 +87,26 @@ Ktune40 <- train(rec_tune40, data = train,
 
 stopCluster(cluster)
 registerDoSEQ()
-Ktune40$finalModel$importance
-Ktune40$finalModel$tuneValue
-Ktune40$finalModel$importance
-confusionMatrix.train(Ktune40,norm = "none")
 ```
 
 Now just run a random cv model; ffs
 
 ```{r}
 
-
-library(recipes)
-
-ffsK_noSD$selectedvars
-
-rec_tunenoSD80 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-tpi30agg,-vv30agg, -nppmmid30agg,-decid30RS,
-              -cad30RS, -cpg30precip, -deficitRS, -NDVI_med, new_role = "bring along")
+  
+rec_tunenoSD <-   recipe(stream ~ ., data = train) %>% 
+  update_role(-stream,-accum30,-cpg30precip,-nppmmid30agg,-cad30RS,-deficitRS,-NDVI_med,-decid30RS,-vv30agg,-tpi30agg, new_role = "bring along")
 
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-KtunenoSD80 <- train(rec_tunenoSD80, data = train,
+KtunenoSD <- train(rec_tunenoSD, data = train,
               method = thresh_code,
               metric = "J",
               tuneGrid = expand.grid(mtry = 2:8,ntree=seq(400,2000,200),
-                                     threshold = seq(.4,.6,.02)),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -138,18 +115,13 @@ KtunenoSD80 <- train(rec_tunenoSD80, data = train,
 
 stopCluster(cluster)
 registerDoSEQ()
-
-plot(KtunenoSD80)
-confusionMatrix.train(KtunenoSD80,norm = "none")
 ```
 
 
 
 Now Kmeans Random Forest Tune topography only
 
-```{r, eval=FALSE}
-
-library(recipes)
+```{r}
 
 rec_Ktune80_topo <-   recipe(stream ~ ., data = train) %>% 
   update_role(-stream,-accum30,-twi30agg, -tpi30agg, new_role = "bring along")
@@ -162,7 +134,7 @@ Ktune80_topo <- train(rec_Ktune80_topo, data = train,
               method = thresh_code,
               metric = "J",
               tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.40,.60,.02)),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -175,20 +147,9 @@ registerDoSEQ()
 
 ```
 
-```{r echo=FALSE, message=FALSE, fig.align='center', fig.height=16, fig.width=13}
-
-confusionMatrix(Ktune80,norm = "none")
-Ktune80$finalModel$confusion
-results <- Ktune80$results
-results %>% filter(mtry == 2, ntree == 1000, threshold == 0.48)
-```
-
 Now just run a LLO topography alone model
 
 ```{r}
-
-
-library(recipes)
 
 rec_tune40_topo <-   recipe(stream ~ ., data = train) %>% 
   update_role(-stream,-accum30,-twi30agg, -tpi30agg,new_role = "bring along")
@@ -202,7 +163,7 @@ Ktune40_topo <- train(rec_tune40_topo, data = train,
               method = thresh_code,
               metric = "J",
               tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.4,.6,.02)),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -212,10 +173,6 @@ Ktune40_topo <- train(rec_tune40_topo, data = train,
 
 stopCluster(cluster)
 registerDoSEQ()
-Ktune40_topo$finalModel$importance
-Ktune40_topo$finalModel$tuneValue
-confusionMatrix.train(Ktune40_topo,norm = "none")
-plot(Ktune40_topo)
 ```
 
 Now just run a random cv topography only model
@@ -225,7 +182,7 @@ Now just run a random cv topography only model
 
 library(recipes)
 
-rec_tunenoSD80_topo <-   recipe(stream ~ ., data = train) %>% 
+rec_tunenoSD_topo <-   recipe(stream ~ ., data = train) %>% 
   update_role(-stream,-accum30,-tpi30agg, new_role = "bring along")
 
 
@@ -233,11 +190,11 @@ cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-KtunenoSD80_topo <- train(rec_tunenoSD80_topo, data = train,
+KtunenoSD_topo <- train(rec_tunenoSD_topo, data = train,
               method = thresh_code,
               metric = "J",
               tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.4,.6,.02)),
+                                     threshold = seq(.44,.54,.02)),
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
                                        classProbs = TRUE,
@@ -247,8 +204,6 @@ KtunenoSD80_topo <- train(rec_tunenoSD80_topo, data = train,
 stopCluster(cluster)
 registerDoSEQ()
 
-plot(KtunenoSD80)
-confusionMatrix.train(KtunenoSD80,norm = "none")
 ```
 
 
