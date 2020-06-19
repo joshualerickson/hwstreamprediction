@@ -7,19 +7,25 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+library(sf)
+library(caret)
+library(reshape2)
+library(tidyverse)
 ```
 
 Adding in the NHDPlus data with the resampled locations in the tuning process so we can compare metrics by resample. This is a lot of tedius work but ultimately getting the 'models' all together by CV method.
 
 
 ```{r}
+
+train <- read_csv("train.csv") %>% mutate(across(where(is.character), factor))
 #now get points from train data and extract
 trainPTS <- st_as_sf(train, coords = c("utm1","utm2"))
 
 st_crs(trainPTS) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
 #now give the 0's"X0" and the values "X1"
-train$NHDPlus <- ifelse(train$NHDPlus == 0, "X0", "X1")
+train$NHDPlus <- ifelse(train$NHDPlus == 0, "X1", "X2")
 
 train$NHDPlus <- factor(train$NHDPlus)
 
@@ -28,15 +34,15 @@ train$NHDPlus <- factor(train$NHDPlus)
 #now get the best tune to filter
 Ktune80$bestTune
 Ktune40$bestTune
-KtunenoSD80$bestTune
+KtunenoSD$bestTune
 ```
 
 ```{r}
 
 #now collect resample locations from each tuning process
-resamples.tune80 <-  Ktune80$pred %>% filter(mtry == 2, ntree == 600, threshold == 0.5)
-resamples.tune40 <-  Ktune40$pred %>% filter(mtry == 2, ntree == 1200, threshold == 0.46)
-resamples.tunenoSD <-  KtunenoSD80$pred %>% filter(mtry == 3, ntree == 600, threshold == 0.5)
+resamples.tune80 <-  Ktune80$pred %>% filter(mtry == 2, ntree == 600, threshold == 0.44)
+resamples.tune40 <-  Ktune40$pred %>% filter(mtry == 2, ntree == 1800, threshold == 0.52)
+resamples.tunenoSD <-  KtunenoSD$pred %>% filter(mtry == 3, ntree == 600, threshold == 0.5)
 
 #add common identifier to training set
 train$X <- seq(1,6602,1)
@@ -66,9 +72,9 @@ join_resampnoSD <- left_join(resamples.tunenoSD,train,  by = "X" )
 Now we can select the resampled prediction, observations, NHDPlus and resample id.
 
 ```{r}
-nhdtune80 <- join_resamp80 %>% select(Resample, obs, pred, X0, NHDPlus)
-nhdtune40 <- join_resamp40 %>% select(Resample, obs, pred, X0, NHDPlus)
-nhdtunenoSD <- join_resampnoSD80 %>% select(Resample, obs, pred, X0, NHDPlus)
+nhdtune80 <- join_resamp80 %>% select(Resample, obs, pred, X1, NHDPlus)
+nhdtune40 <- join_resamp40 %>% select(Resample, obs, pred, X1, NHDPlus)
+nhdtunenoSD <- join_resampnoSD %>% select(Resample, obs, pred, X1, NHDPlus)
 ```
 
 Now this allows us to run summary statistics on each of the model types, including the NHDPlus response.
@@ -142,7 +148,7 @@ Now we can create a long data frame and clean up the joining we did above. This 
 
 ```{r}
 
-plotting_80 <- resamps$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
+plotting_80 <- resamps80$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
 
 temp <- strsplit(plotting_80$Metric, "~")
 
@@ -162,19 +168,8 @@ Now do the same for the LLO, except we won't use twoSummarystats function due to
 
 ```{r}
 
-fourStats40tune <-  function(dat) {
-  tab <- caret::confusionMatrix(dat$NHDPlus, dat$obs,
-                                positive = levels(dat$obs)[1])
-  res <- c(tab$byClass, tab$overall[c("Accuracy", "Kappa")])
-  res <- c(res,
-           res["Sensitivity"] + res["Specificity"] - 1,
-           sqrt((res["Sensitivity"] - 1) ^ 2 + (res["Specificity"] - 1) ^ 2))
-  names(res)[-seq_len(length(res) - 2)] <- c("J", "Dist")
-  list(res)
-  
-}
 
-blah2 <- nhdtune40 %>% base::split(.$Resample) %>% map(fourStats40tune)
+blah2 <- nhdtune40 %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
 
 blah_names2 <- data.frame(Resample = names(blah2))
 
@@ -227,7 +222,7 @@ Now we can do the final join of NHDPlus and the models. This will be for the ran
 ```{r}
 
 
-blah3 <- nhdtunenoSD80 %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
+blah3 <- nhdtunenoSD %>% base::split(.$Resample) %>% map(fourStatsNhdtune)
 
 blah_names3 <- data.frame(Resample = names(blah3))
 
@@ -242,8 +237,8 @@ blah3$Metric<- paste0("NHDPlus~",blah3$Metric)
 blah3<- blah3 %>% pivot_wider(names_from = "Metric")
 
 resampsnoSD <- resamples(list(
-                          Topoclimatic = KtunenoSD80,
-                          TopoOnly = KtunenoSD80_topo))
+                          Topoclimatic = KtunenoSD,
+                          TopoOnly = KtunenoSD_topo))
 
 resampsnoSD$values <- plyr::join(blah3, resampsnoSD$values, by = "Resample")
 
