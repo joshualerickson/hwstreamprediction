@@ -18,12 +18,11 @@ library(parallel)
 #### FFS Random Forest
 
 So with the FFS we will just use the default parameters for Random Forest (e.g. mtry = 2, 4, 6 and ntrees = 500)
-```{r, eval=FALSE}
+```{r}
 
+FeatureSelection <- read_csv("FeatureSelection.csv")  %>% mutate(across(is.character, factor))
 
 predictorsRF <- FeatureSelection[,c("twi30agg","tpi30agg","accum30","vv30agg", "vvsd30agg","npol30agg","NDVI_med", "nppmmid30agg","deficitRS","cad30RS","decid30RS","cpg30precip","Green_med","NIR_med")]
-
-levels(FeatureSelection$stream) <- c("X0", "X1")
 
 responseRF <- FeatureSelection$stream
 
@@ -31,7 +30,7 @@ responseRF <- FeatureSelection$stream
 
 *FFS Kmeans Random Forest with clusters*
 
-```{r eval=FALSE}
+```{r}
 #bring in cores
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
@@ -60,9 +59,9 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
-*now with a 40 cluster LLO*
+*now with a 40 cluster*
 
-```{r eval=FALSE}
+```{r}
 #bring in cores
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
@@ -84,7 +83,7 @@ ffsK_40 <- ffs(predictorsRF,responseRF,
   metric = "ROC",
   method = "rf",
   trControl = ctrlK_40)
-ffsK_40$selectedvars
+
 #now remove cluster. consistency...
 stopCluster(cluster)
 registerDoSEQ()
@@ -94,7 +93,7 @@ registerDoSEQ()
 
 *FFS Kmeans Random Forest without spatial dependance structures*
 
-```{r eval=FALSE}
+```{r}
 #bring in cores
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
@@ -122,15 +121,4 @@ stopCluster(cluster)
 registerDoSEQ()
 ```
 
-
-```{r}
-
-ffsK_LLO80$selectedvars
-ffsK80$selectedvars
-ffsK_noSD$selectedvars
-
-FeatureSelection %>% count(spatial_cluster80, sort = TRUE) %>% 
-  ggplot() + geom_freqpoly(aes(n, ..density..), binwidth = 5)
-
-```
 
