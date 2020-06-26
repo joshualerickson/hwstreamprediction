@@ -1,7 +1,7 @@
 # hwstreamprediction
 Predicting headwater streams in northwest Montana.
 
-Workflow Order below. Please take the point .shp file and .tif files from.
+Workflow Order below. Please take any needed data (e.g., .shp, .csv, .tif files) from [google drive](https://drive.google.com/drive/folders/100in8JlxDCbRLTPCzQ-p9D54SQxIP37d?usp=sharing).
 
 1. **PreProc** - Pre-processing the data. Correlation, distributions, outliers, etc.
 
