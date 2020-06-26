@@ -16,3 +16,7 @@ Workflow Order below. Please take any needed data (e.g., .shp, .csv, .tif files)
 6. **nhd_add_resamps** - Bring it all together. Calculate resample statistics including NHDPlus.
 
 7. **bootstrapping** - Create bootstrap distribution confidence intervals (standard error and percentile).
+
+8. **final_csvs** - These are the csvs that were generated after all the modeling and tidying.
+
+9. **exploring_model_results** - Looking at different aggregations of the model results. 
