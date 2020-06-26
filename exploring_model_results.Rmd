@@ -1,0 +1,182 @@
+---
+title: "Untitled"
+author: "Josh Erickson"
+date: "June 24, 2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+library(sf)
+library(nhdplusTools)
+library(exactextractr)
+library(tidyverse)
+library(conflicted)
+```
+
+Bring in some layers "HUC12 to HUC10" to compare and contrast predictions across the landscape. You can also do this with the clusters (80 and 40) as well as the random hold-out. The exploration is endless but the key finding is the accuracy variance of the models and how that is handled/distributed across the landscape.
+
+```{r}
+
+nhdPlushr <- get_nhdplushr(getwd(), "nhdplus.gpkg",
+                           layers = c("WBDHU12", "WBDHU10"), overwrite = TRUE, proj = "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+HUC12 <- nhdPlushr$WBDHU12
+
+HUC12 <- st_transform(HUC12, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+HUC12 <- st_crop(HUC12, c(xmin = 150035.8, xmax = 222365.8, 
+                                      ymin = 507390, ymax = 574500 ))
+HUC12 <- HUC12 %>% select(Name, AreaSqKM, AreaAcres)
+
+#now extract some zonal statistics from the rasters
+HUC12 <- st_cast(HUC12, "POLYGON")
+
+
+HUC12$mean_def <- exact_extract(deficit, HUC12, 'mean')
+ggplot() + geom_sf(data = HUC12,  aes(fill = stdev_def)) + geom_sf(data = DistrictBoundary, fill = NA, col = "black", size = 3)
+
+#now add more
+HUC12$mode_def <- exact_extract(deficit, HUC12, 'mode')
+HUC12$stdev_def <- exact_extract(deficit, HUC12, function(values, coverage_fraction) sd(values, na.rm = TRUE)) 
+HUC12$count_def <- exact_extract(deficit, HUC12, function(values, coverage_fraction)
+                            length(values))
+#let's add npp since it came up as the 2nd variable in all the models
+HUC12$mode_npp <- exact_extract(nppMid30, HUC12, 'mode')
+HUC12$mean_npp <- exact_extract(nppMid30, HUC12, 'mean')
+HUC12$stdev_npp <- exact_extract(nppMid30, HUC12, function(values, coverage_fraction) sd(values, na.rm = TRUE)) 
+HUC12$count_npp <- exact_extract(nppMid30, HUC12, function(values, coverage_fraction)
+                            length(values))
+
+
+```
+
+Now let's bring these zonal stats into the resamples to explore some trends with deficit and stream expression. This is just a 'hack' way of exploring accuracy within different zones/aggregations.
+
+```{r}
+
+
+join_all80 <- st_as_sf(join_all80, coords = c("utm1", "utm2"))
+
+join_all80 <- join_all80 %>% st_set_crs(proj.study) 
+
+join_all80 <- st_transform(join_all80, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+
+join_80intersect <- st_intersection(join_all80, HUC12)
+
+
+join_all40 <- st_as_sf(join_all40, coords = c("utm1", "utm2"))
+
+join_all40 <- join_all40 %>% st_set_crs(proj.study) 
+
+join_all40 <- st_transform(join_all40, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+join_40intersect <- st_intersection(join_all40, HUC12)
+
+
+join_allnoSD <- st_as_sf(join_allnoSD, coords = c("utm1", "utm2"))
+
+join_allnoSD <- join_allnoSD %>% st_set_crs(proj.study) 
+
+join_allnoSD <- st_transform(join_allnoSD, "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0")
+
+join_noSDintersect <- st_intersection(join_allnoSD, HUC12)
+
+```
+
+
+```{r}
+summary_80 <- join_80intersect %>% group_by(mode_def) %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic ==                                       obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only ==                                     obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic,                                                            1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+  
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n())
+
+summary_80_clust <- join_80intersect %>% group_by(spatial_cluster80) %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic == obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only == obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic, 1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n(),
+                        meanDef = mean(deficitRS),
+                        meanNPP = mean(nppmmid30agg))
+
+summary_40 <- join_40intersect %>% group_by(mode_def) %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic == obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only == obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic, 1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n())
+
+summary_40_clust <- join_80intersect %>% group_by(spatial_cluster40) %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic == obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only == obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic, 1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n(),
+                        meanDef = mean(deficitRS),
+                        meanNPP = mean(nppmmid30agg))
+
+
+summary_noSD <- join_noSDintersect %>% group_by(mode_def) %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic == obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only == obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic, 1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n(),
+                        defMean = mean(deficitRS))
+
+summary_noSD_clust <- join_noSDintersect %>% group_by() %>%
+                     mutate(pred_if = ifelse(pred_topoclimatic == obs_topoclimatic, 1, 0),
+                            Topoclimatic_rate = sum(pred_if)/n(),
+                            pred_if_topo = ifelse(pred_topo_only == obs_topo_only, 1, 0),
+                            Topo_rate = sum(pred_if_topo)/n(),
+                            NHDPlus_if = ifelse(NHDPlus == obs_topoclimatic, 1, 0),
+                            NHDPlus_rate = sum(NHDPlus_if)/n()) %>% 
+              summarise(Topo_rate = mean(Topo_rate),
+                        NHDPlus_rate = mean(NHDPlus_rate),
+                        Topoclimatic_rate = mean(Topoclimatic_rate),
+                        count = n(),
+                        defMean = mean(deficitRS))
+
+summary_80_clust  %>% pivot_longer(cols = ends_with("rate"), "Model", "value") %>% ggplot(aes(meanDef, value, color = Model)) + geom_point() + geom_smooth(method = "lm") + facet_wrap(~Model)
+
+summary_40_clust  %>% pivot_longer(cols = ends_with("rate"), "Model", "value") %>% ggplot(aes(meanNPP, value, color = meanDef)) + geom_point() + geom_smooth(method = "lm") + facet_wrap(~Model)
+
+summary_noSD  %>% pivot_longer(cols = ends_with("rate"), "Model", "value") %>% ggplot(aes(defMean, value, color = Model)) + geom_point() + geom_smooth(method = "lm") + facet_wrap(~Model)
+
+```
+
+```{r}
+join_40intersect %>% ggplot() + geom_hex(aes(deficitRS,nppmmid30agg))
+```
+
