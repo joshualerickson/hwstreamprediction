@@ -82,10 +82,6 @@ ci.resamp80per <- final_resamp80_means %>% rename(stat = "boot") %>%  group_by(m
 ```
 
 
-```{r}
-
-```
-
 Now for 40 cluster 
 
 ```{r}
@@ -95,10 +91,6 @@ ci.resamp40se <- final_resamp40_means %>% left_join(plotting_40, by = c("model" 
 #and
 
 ci.resamp40per <- final_resamp40_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
-
-```
-
-```{r}
 
 ```
 
@@ -113,6 +105,8 @@ ci.resampnoSDse <- final_resampnoSD_means %>% left_join(noSD_plotting, by = c("m
 ci.resampnoSDper <- final_resampnoSD_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
 
 ```
+
+Now look at the differences between intervals and model type.
 
 ```{r}
 g1 <- ci.resamp80per %>% mutate(diff = max(`97.5%`) - min(`2.5%`)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in 97.5% to 2.5% (percentiles)", title = "Comparing Bootstrapped Distribution 95% CI (Perc.) of Model Means", subtitle = "80 cluster 10-fold CV")
@@ -135,6 +129,6 @@ g6 <- ci.resampnoSDse %>% mutate(diff = max(upper) - min(lower)) %>% ggplot() + 
 
 
 ```{r}
-
+ggpubr::ggarrange(g1,g2,g3,g4,g5,g6, nrow = 3, legend = "right", common.legend = TRUE)
 ```
 

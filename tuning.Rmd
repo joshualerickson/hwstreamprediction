@@ -26,7 +26,6 @@ After you run the ffs you just need the feature selections; if you want to save 
 ffsK80_names <- ffsK80$selectedvars
 
 ffsK40_names <- ffsK_40$selectedvars
-install.packages("assertive.base")
 
 ffsKnoSD_names <- ffsK_noSD$selectedvars
 ```
@@ -95,8 +94,7 @@ Now just run a random cv model; ffs
 
   
 rec_tunenoSD <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-cpg30precip,-nppmmid30agg,-cad30RS,-deficitRS,-NDVI_med,-decid30RS,-vv30agg,-tpi30agg, new_role = "bring along")
-
+  update_role(-stream,-ffsKnoSD_names, new_role = "bring along")
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)

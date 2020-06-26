@@ -26,8 +26,6 @@ thresh_code$grid <- function(x, y, len = NULL, search = "grid") {
       }
   grid
 }
-
-
 ## Here we fit a single random forest model (with a fixed mtry and ntree)
 ## and loop over the threshold values to get predictions from the same
 ## randomForest model. This will let find the optimum J value.
@@ -43,7 +41,6 @@ thresh_code$loop = function(grid) {
     }    
   list(loop = loop, submodels = submodels)
 }
-
 ```
 
 
@@ -53,7 +50,6 @@ thresh_code$fit = function(x, y, wts, param, lev, last, classProbs, ...) {
     stop("This works only for 2-class problems")
   randomForest(x, y, mtry = param$mtry, ntree = param$ntree, ...)
   }
-
 ## Now get a probability prediction and use different thresholds to
 ## get the predicted class
 thresh_code$predict = function(modelFit, newdata, submodels = NULL) {
@@ -78,7 +74,6 @@ thresh_code$predict = function(modelFit, newdata, submodels = NULL) {
     } 
   out  
   }
-
 ## The probabilities are always the same but we have to create
 ## mulitple versions of the probs to evaluate the data across
 ## thresholds
@@ -114,27 +109,4 @@ fourStats <- function (data, lev = levels(data$obs), model = NULL) {
   c(out, res)
 }
 ```
-
-
-run some fake data and test.
-```{r}
-faked <- traintune[c(1:50,6000:6050),c(1,5:21)]
-levels(faked$stream) <- c("X0","X1")
-set.seed(949)
-library(randomForest)
-mod1 <- train(stream ~ ., data = faked,
-              method = thresh_code,
-              metric = "J",
-              maximize = FALSE,
-              tuneGrid = expand.grid(mtry = c(2,4,6), ntree = c(1000,2000),
-                                     threshold = seq(0.1,.99, .05)),
-              trControl = trainControl(method = "repeatedcv",
-                                       repeats = 5,
-                                       classProbs = TRUE,
-                                       summaryFunction = fourStats,
-                                           savePredictions = 'all'))
-
-mod1
-```
-It works. What's nice is that it selects the best model at a certain threshold with the J statistic and then can use that for predicting/reporting.
 
