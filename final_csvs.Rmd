@@ -9,7 +9,23 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-Create some csv's from all the data we've generated.
+Create some csv's from all the data we've generated. First the prediction results from each model.
+
+```{r}
+
+write_csv(resamples.tune80, "resamples.tune80.csv")
+
+write_csv(resamples.tune40, "resamples.tune40.csv")
+
+write_csv(resamples.tunenoSD, "resamples.tunenoSD.csv")
+
+write_csv(resamples.tune80_topo, "resamples.tune80_topo.csv")
+
+write_csv(resamples.tune40_topo, "resamples.tune40_topo.csv")
+
+write_csv(resamples.tunenoSD_topo, "resamples.tunenoSD_topo.csv")
+```
+
 
 These data take the resamples per model, metric, and dependance structure.
 
