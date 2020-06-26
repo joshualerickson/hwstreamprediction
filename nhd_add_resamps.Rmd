@@ -194,7 +194,7 @@ colnames(plotting_80)[4] <- "metric"
 ```
 
 
-Now do the same for the LLO, except we won't use twoSummarystats function due to ROC being finicky with insufficient values, i.e. LLO is prone to this since you're only testing with minimal data.
+Now do the same for the 40 cluster.
 
 
 ```{r}
