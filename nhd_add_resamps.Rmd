@@ -19,92 +19,41 @@ Adding in the NHDPlus data with the resampled locations in the tuning process so
 
 ```{r}
 
-train <- read_csv("train.csv") %>% mutate(across(where(is.character), factor))
+train <- read_csv("data/data34.csv") %>% mutate(across(where(is.character), factor))
 #now get points from train data and extract
 trainPTS <- st_as_sf(train, coords = c("utm1","utm2"))
 
 st_crs(trainPTS) <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
 #now give the 0's"X0" and the values "X1"
-train$NHDPlus <- ifelse(train$NHDPlus == 0, "X1", "X2")
+train$NHDPlus_char <- ifelse(train$NHDPlus == 0, paste("X1"), paste("X2"))
 
-train$NHDPlus <- factor(train$NHDPlus)
+train$NHDPlus_fact <- factor(train$NHDPlus_char)
 
 #now we have baseline data associated with the points used in the models
 
-#now get the best tune to filter
-Ktune80$bestTune
-Ktune40$bestTune
-KtunenoSD$bestTune
+#now get the best tune to filter for the GBM 10 cluster model topoclimatic 
+GBM_k10_4$bestTune
 
-Ktune80_topo$bestTune
-Ktune40_topo$bestTune
-KtunenoSD_topo$bestTune
 ```
 
 ```{r}
 
 #now collect resample locations from each tuning process
-resamples.tune80 <-  Ktune80$pred %>% filter(mtry == 2, ntree == 600, threshold == 0.44)
-resamples.tune40 <-  Ktune40$pred %>% filter(mtry == 2, ntree == 1800, threshold == 0.52)
-resamples.tunenoSD <-  KtunenoSD$pred %>% filter(mtry == 3, ntree == 600, threshold == 0.5)
-
-resamples.tune80_topo <-  Ktune80_topo$pred %>% filter(mtry == 2, ntree == 800, threshold == 0.5)
-resamples.tune40_topo <-  Ktune40_topo$pred %>% filter(mtry == 2, ntree == 400, threshold == 0.48)
-resamples.tunenoSD_topo <-  KtunenoSD_topo$pred %>% filter(mtry == 2, ntree == 800, threshold == 0.46)
+resamples.GBM_k10_4 <- GBM_k10_4$pred %>% filter(n.trees == 500, interaction.depth == 2, shrinkage == 0.05, n.minobsinnode == 25)  
 
 #add common identifier to training set
-train$X <- seq(1,6602,1)
+train$rowIndex <- seq(1,8802,1)
 
-#now the resamples
-colnames(resamples.tune80)[2] <- "X"
-colnames(resamples.tune80_topo)[2] <- "X"
-
-#now join for the CV80
-join_resamp80 <- left_join(resamples.tune80,train,  by = "X" )
-
-join_resamp80 <- join_resamp80 %>% rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample),funs(paste(., "topoclimatic", sep = "_")))
-
-join_resamp80_topo <- resamples.tune80_topo %>%  rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample),funs(paste(., "topo_only", sep = "_")))
-
-join_all80 <- left_join(join_resamp80, join_resamp80_topo, by = "X")
-####  do for the others ###
-
-#now for the LLOCV
-colnames(resamples.tune40)[2] <- "X"
-colnames(resamples.tune40_topo)[2] <- "X"
-
-#now join
-join_resamp40 <- left_join(resamples.tune40,train, by = "X" )
-
-join_resamp40 <- join_resamp40 %>%  rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample),funs(paste(., "topoclimatic", sep = "_")))
-
-join_resamp40_topo <- resamples.tune40_topo %>% rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample),funs(paste(., "topo_only", sep = "_")))
-
-join_all40 <- left_join(join_resamp40, join_resamp40_topo,train,    by = "X" )
-
-#now the no spatial dependance "noSD"
-colnames(resamples.tunenoSD)[2] <- "X"
-colnames(resamples.tunenoSD_topo)[2] <- "X"
-
-#now join
-join_resampnoSD <- left_join(resamples.tunenoSD,train,  by = "X" )
-
-join_resampnoSD <- join_resampnoSD %>% rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample), funs(paste(., "topoclimatic", sep = "_")))
-
-join_resampnoSD_topo <- resamples.tunenoSD_topo %>% rename_at(vars(obs, pred, X1, X2, mtry, ntree, threshold, Resample),funs(paste(., "topo_only", sep = "_")))
-
-join_allnoSD <- left_join(join_resampnoSD, join_resampnoSD_topo,  by = "X" )
-
+#now join for train and resamps
+join_resamp <- left_join(resamples.GBM_k10_4,train,  by = "rowIndex" )
 
 ```
 
-Now we can select the resampled prediction, observations, NHDPlus and resample id.
+Now we can select the resampled prediction, observations, NHDPlus_fact and resample id.
 
 ```{r}
-nhdtune80 <- join_resamp80 %>% select(Resample_topoclimatic, obs_topoclimatic, pred_topoclimatic, X1_topoclimatic, NHDPlus)
-nhdtune40 <- join_resamp40 %>% select(Resample_topoclimatic, obs_topoclimatic, pred_topoclimatic, X1_topoclimatic, NHDPlus)
-nhdtunenoSD <- join_resampnoSD %>% select(Resample_topoclimatic, obs_topoclimatic, pred_topoclimatic, X1_topoclimatic, NHDPlus)
+nhdtune <- join_resamp %>% select(obs, NHDPlus_fact, Resample)
 
 ```
 
@@ -115,19 +64,19 @@ Now this allows us to run summary statistics on each of the model types, includi
 #now we can run the stats on it.
 twoClassSummaryNHD <- function (data, lev = NULL, model = NULL) 
 {
-    rocObject <- pROC::roc(as.numeric(data$obs_topoclimatic), as.numeric(data$NHDPlus))
+    rocObject <- pROC::roc(as.numeric(data$obs), as.numeric(data$NHDPlus_fact))
     
     rocAUC <- rocObject$auc
     
-    out <- c(rocAUC, sensitivity(data[, "NHDPlus"], data[, "obs_topoclimatic"], 
-        lev[1]), specificity(data[, "NHDPlus"], data[, "obs_topoclimatic"], lev[2]))
+    out <- c(rocAUC, sensitivity(data[, "NHDPlus_fact"], data[, "obs"], 
+        lev[1]), specificity(data[, "NHDPlus_fact"], data[, "obs"], lev[2]))
     names(out) <- c("ROC", "Sens", "Spec")
     out
 }
 fourStatsNhdtune <-  function(dat) {
-  out <- c(twoClassSummaryNHD(dat, lev = levels(dat$obs_topoclimatic), model = NULL))
-  tab <- caret::confusionMatrix(dat$NHDPlus, dat$obs_topoclimatic,
-                                positive = levels(dat$obs_topoclimatic)[1])
+  out <- c(twoClassSummaryNHD(dat, lev = levels(dat$obs), model = NULL))
+  tab <- caret::confusionMatrix(dat$NHDPlus_fact, dat$obs,
+                                positive = levels(dat$obs)[1])
   res <- c(tab$byClass, tab$overall[c("Accuracy", "Kappa")])
   res <- c(res,
            res["Sensitivity"] + res["Specificity"] - 1,
@@ -143,158 +92,19 @@ Now we can run the summary stats on each Resample (group). Start with the 80 clu
 ```{r}
 
 
-blah <- nhdtune80 %>% base::split(.$Resample_topoclimatic) %>% map(fourStatsNhdtune)
+blah <- nhdtune %>% split(.$Resample) %>% map(fourStatsNhdtune)
 
 blah_names <- data.frame(Resample = names(blah))
 
 blah <- blah %>% map_df(unlist)
 
-blah <- cbind(blah_names, blah)
+nhd <- cbind(blah_names, blah)
 
-blah <- blah %>% pivot_longer(-Resample, names_to = "Metric")
-
-blah$Metric<- paste0("NHDPlus~",blah$Metric)
-
-blah<- blah %>% pivot_wider(names_from = "Metric")
-
-#the resamples function does the same thing but doesn't handle 'non-caret' objects
-#thus we only use the models we used caret on.
-
-resamps80 <- resamples(list(
-                          Topoclimatic = Ktune80,
-                          TopoOnly = Ktune80_topo))
-
-#now we can join the NHDPlus results with the topoclimatic and topo-only models
-
-resamps80$values <- plyr::join(blah, resamps80$values, by = "Resample")
-
-resamps80$methods$NHDPlus <- "custom"
-
-resamps80$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
-
-summary(resamps80, resamples = "final", metric = "J")
-```
-
-Now we can create a long data frame and clean up the joining we did above. This will make it easier to plot.
-
-```{r}
-
-plotting_80 <- resamps80$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
-
-temp <- strsplit(plotting_80$Metric, "~")
-
-mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
-df <- as.data.frame(mat)
-
-plotting_80 <- cbind(plotting_80[,c(1,3)], df)
-colnames(plotting_80)[3] <- "model"
-colnames(plotting_80)[4] <- "metric"
-
+nhd <- nhd %>% mutate(model = 'NHDPlus')
 
 ```
 
 
-Now do the same for the 40 cluster.
 
 
-```{r}
-
-
-blah2 <- nhdtune40 %>% base::split(.$Resample_topoclimatic) %>% map(fourStatsNhdtune)
-
-blah_names2 <- data.frame(Resample = names(blah2))
-
-blah2 <- blah2 %>% map_df(unlist)
-
-blah2 <- cbind(blah_names2, blah2)
-
-blah2 <- blah2 %>% pivot_longer(-Resample, names_to = "Metric")
-
-blah2$Metric<- paste0("NHDPlus~",blah2$Metric)
-
-blah2<- blah2 %>% pivot_wider(names_from = "Metric")
-
-resamps40 <- resamples(list(
-                          Topoclimatic = Ktune40,
-                          TopoOnly = Ktune40_topo))
-
-resamps40$values <- plyr::join(blah2, resamps40$values, by = "Resample")
-
-resamps40$methods$NHDPlus <- "custom"
-
-resamps40$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
-
-summary(resamps40, resamples = "final", metric = "J")
-
-```
-
-Now clean up LLO for plotting.
-
-```{r}
-
-plotting_40 <- resamps40$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
-
-temp <- strsplit(plotting_40$Metric, "~")
-
-mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
-df <- as.data.frame(mat)
-
-plotting_40 <- cbind(plotting_40[,c(1,3)], df)
-colnames(plotting_40)[3] <- "model"
-colnames(plotting_40)[4] <- "metric"
-
-
-```
-
-
-Now we can do the final join of NHDPlus and the models. This will be for the random CV with no dependance structure.
-
-
-```{r}
-
-blah3 <- nhdtunenoSD %>% base::split(.$Resample_topoclimatic) %>% map(fourStatsNhdtune)
-
-blah_names3 <- data.frame(Resample = names(blah3))
-
-blah3 <- blah3 %>% map_df(unlist)
-
-blah3 <- cbind(blah_names3, blah3)
-
-blah3 <- blah3 %>% pivot_longer(-Resample, names_to = "Metric")
-
-blah3$Metric<- paste0("NHDPlus~",blah3$Metric)
-
-blah3<- blah3 %>% pivot_wider(names_from = "Metric")
-
-resampsnoSD <- resamples(list(
-                          Topoclimatic = KtunenoSD,
-                          TopoOnly = KtunenoSD_topo))
-
-resampsnoSD$values <- plyr::join(blah3, resampsnoSD$values, by = "Resample")
-
-resampsnoSD$methods$NHDPlus <- "custom"
-
-resampsnoSD$models <- c("Topoclimatic", "TopoOnly", "NHDPlus")
-
-summary(resampsnoSD, resamples = "final", metric = "J")
-
-```
-
-And, clean up for plotting.
-
-```{r}
-
-noSD_plotting <- resampsnoSD$values %>% pivot_longer(cols = -Resample, names_to = "Metric") 
-
-temp <- strsplit(noSD_plotting$Metric, "~")
-
-mat <- matrix(unlist(temp), ncol = 2, byrow = TRUE)
-df <- as.data.frame(mat)
-
-noSD_plotting<- cbind(noSD_plotting[,c(1,3)], df)
-colnames(noSD_plotting)[3] <- "model"
-colnames(noSD_plotting)[4] <- "metric"
-
-
-```
 
