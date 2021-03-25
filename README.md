@@ -5,18 +5,12 @@ Workflow Order below. Please take any needed data (e.g., .shp, .csv, .tif files)
 
 1. **PreProc** - Pre-processing the data. Correlation, distributions, outliers, etc.
 
-2. **dataSplit** - Splitting the data into feature selection and training/evaluation. Also creating spatial dependance folds.
+2. **ffs_script_clustering** - performing numerous spatial holdouts with ffs.
 
-3. **customRF** - Adapt a custom random forest model.
-
-4. **ffs** - Perform feature selection with the three dependance structures. Total of 3 models.
+3. **customRF** - Adapt a custom random forest model for tuning.
 
 5. **tuning** - Perform tuning on all model types (topoclimatic and topo-only) as well as all dependance structures. Total of 6 models.
 
 6. **nhd_add_resamps** - Bring it all together. Calculate resample statistics including NHDPlus.
 
 7. **bootstrapping** - Create bootstrap distribution confidence intervals (standard error and percentile).
-
-8. **final_csvs** - These are the csvs that were generated after all the modeling and tidying.
-
-9. **exploring_model_results** - Looking at different aggregations of the model results. 
