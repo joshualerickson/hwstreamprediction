@@ -87,7 +87,7 @@ fourStatsNhdtune <-  function(dat) {
 }
 ```
 
-Now we can run the summary stats on each Resample (group). Start with the 80 cluster.
+Wrap it up. Map resample stats to the nhdtune df by resample.
 
 ```{r}
 

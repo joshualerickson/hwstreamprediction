@@ -17,192 +17,180 @@ library(parallel)
 Now tune the variables from the feature selection.
 
 ```{r}
-train <- read_csv("train.csv") %>% mutate(across(where(is.character), factor))
+train <- read_csv("data/data34.csv") %>% mutate(across(where(is.character), factor))
+
 ```
 
 After you run the ffs you just need the feature selections; if you want to save space you can just keep the names and delete the ffs models.
 
 ```{r, eval = FALSE}
-ffsK80_names <- ffsK80$selectedvars
 
-ffsK40_names <- ffsK_40$selectedvars
+ffsGBM_K10_names_4 <- c("accum30", "tpi30agg", "deficitRS", "nppmmid30agg")
 
-ffsKnoSD_names <- ffsK_noSD$selectedvars
+gbmcv_names <- c("twi30agg","tpi30agg","accum30","vv30agg", "vvsd30agg","npol30agg","NDVI_med", "nppmmid30agg","deficitRS","cad30RS","decid30RS","cpg30precip","Green_med","NIR_med")
+
+topo_names <- c("twi30agg", "tpi30agg", "accum30")
 ```
 
+Now create our stats/summary function
+```{r}
+fourStats <- function (data, lev = levels(data$obs), model = NULL) {
+  ## This code will get use the area under the ROC curve and the
+  ## sensitivity and specificity values using the current candidate
+  ## value of the probability threshold.
+  out <- c(twoClassSummary(data, lev = levels(data$obs), model = NULL))
+  
+  ## The best possible model has sensitivity of 1 and specificity of 1. 
+  ## How far are we from that value?
+  tab <- caret::confusionMatrix(data$pred, data$obs,
+                                positive = levels(data$obs)[1])
+  res <- c(tab$byClass, tab$overall[c("Accuracy", "Kappa")])
+  res <- c(res,
+           res["Sensitivity"] + res["Specificity"] - 1,
+           sqrt((res["Sensitivity"] - 1) ^ 2 + (res["Specificity"] - 1) ^ 2))
+  names(res)[-seq_len(length(res) - 2)] <- c("J", "Dist")
+  res
+  c(out, res)
+}
+```
+```{r}
+#this is the k-means method (using a cluster of 10)
 
+Mycluster10 <- kmeans(train[,c('utm1','utm2')], (nrow(train)/10))
 
-Kmeans Random Forest Tune ffs
+# add the new variable back to your dataframe here
+train$spatial_cluster10 = Mycluster10$cluster
+
+set.seed(1234)
+indicesKtrain10 <- CreateSpacetimeFolds(train, spacevar = "spatial_cluster10", k = 10)
+```
+
+GBM with 10 cluster
 
 ```{r}
 
-rec_Ktune80 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-ffsK80_names, new_role = "bring along")
+ffsGBM_k10_4 <-   recipe(stream ~ ., data = train) %>% 
+  update_role(-stream,-all_of(ffsGBM_K10_names_4), new_role = "bring along")
+
+gbmGrid <- expand.grid(interaction.depth = c(2,4,6,8), n.trees = c(500,1000,1500,2000), shrinkage = c(0.001,.01, 0.05,0.1), n.minobsinnode = c(10,15,25,50))
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-Ktune80 <- train(rec_Ktune80, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2:6,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
+GBM_k10_4 <- train(ffsGBM_k10_4, data = train,
+              method = 'gbm',
+              metric = "Accuracy",
+              tuneGrid = gbmGrid,
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
+                                       number = 10,
                                        classProbs = TRUE,
+                                       returnResamp = "all",
                                        savePredictions = 'all',
-                                       index = indicesKtrain80$index,
+                                       index = indicesKtrain10$index,
+                                       allowParallel = TRUE,
+                                       verbose = FALSE, 
                                        summaryFunction = fourStats))
-
+GBM_k10_4$bestTune
+GBM_k10_4results <- GBM_k10_4$results %>% mutate(model = "GBM_k10_4")
 stopCluster(cluster)
 registerDoSEQ()
 
 ```
 
-Now just run a 40 cluster model; ffs
-
-```{r}
-
-rec_tune40 <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-ffsK40_names, new_role = "bring along")
-
-
-cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
-registerDoParallel(cluster)
-
-set.seed(1234)
-Ktune40 <- train(rec_tune40, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2:8,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
-              trControl = trainControl(method = "repeatedcv",
-                                       repeats = 5,
-                                       classProbs = TRUE,
-                                       savePredictions = 'all',
-                                       index = indicesKtrain40$index,
-                                       summaryFunction = fourStats))
-
-stopCluster(cluster)
-registerDoSEQ()
-```
-
-Now just run a random cv model; ffs
+Now just run a random gbm cv model with all predictors
 
 ```{r}
 
   
-rec_tunenoSD <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-ffsKnoSD_names, new_role = "bring along")
+rec_GBM_rcv <-   recipe(stream ~ ., data = train) %>% 
+  update_role(-stream,-all_of(gbmcv_names), new_role = "bring along")
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-KtunenoSD <- train(rec_tunenoSD, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2:8,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
+KtunenoSD <- train(rec_GBM_rcv, data = train,
+              method = 'gbm',
+              metric = "Accuracy",
+              tuneGrid = gbmGrid,
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
+                                       number = 10,
                                        classProbs = TRUE,
+                                       returnResamp = "all",
                                        savePredictions = 'all',
+                                       allowParallel = TRUE,
+                                       verbose = FALSE, 
                                        summaryFunction = fourStats))
+KtunenoSD$bestTune
+GBM_Rcvresults <- KtunenoSD$results %>% mutate(model = "GBM_Rcv")
 
 stopCluster(cluster)
 registerDoSEQ()
 ```
 
-
-
-Now Kmeans Random Forest Tune topography only
+Now Kmeans 10 GBM Tune topography only
 
 ```{r}
 
-rec_Ktune80_topo <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-twi30agg, -tpi30agg, new_role = "bring along")
+rec_Ktune10_topo <-   recipe(stream ~ ., data = train) %>% 
+  update_role(-stream,-all_of(topo_names), new_role = "bring along")
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-Ktune80_topo <- train(rec_Ktune80_topo, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
+Ktune10_topo <- train(rec_Ktune10_topo, data = train,
+              method = 'gbm',
+              metric = "Accuracy",
+              tuneGrid = gbmGrid,
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
+                                       number = 10,
                                        classProbs = TRUE,
+                                       returnResamp = "all",
                                        savePredictions = 'all',
-                                       index = indicesKtrain80$index,
+                                       index = indicesKtrain10$index,
+                                       allowParallel = TRUE,
+                                       verbose = FALSE, 
                                        summaryFunction = fourStats))
-
+Ktune10_topo$bestTune
+Topo_k10results <- Ktune10_topo$results %>% mutate(model = "Topo_k10")
 stopCluster(cluster)
 registerDoSEQ()
 
 ```
 
-Now just run a LLO topography alone model
+Now just run a topography alone model on random cv GBM.
 
 ```{r}
 
-rec_tune40_topo <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-twi30agg, -tpi30agg,new_role = "bring along")
+rec_tune_topo <-   recipe(stream ~ ., data = train) %>% 
+  update_role(-stream,-all_of(topo_names),new_role = "bring along")
 
 
 cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
 registerDoParallel(cluster)
 
 set.seed(1234)
-Ktune40_topo <- train(rec_tune40_topo, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
+Ktune_topo <- train(rec_tune_topo, data = train,
+              method = 'gbm',
+              metric = "Accuracy",
+              tuneGrid = gbmGrid,
               trControl = trainControl(method = "repeatedcv",
                                        repeats = 5,
+                                       number = 10,
                                        classProbs = TRUE,
+                                       returnResamp = "all",
                                        savePredictions = 'all',
-                                       index = indicesKtrain40$index,
+                                       allowParallel = TRUE,
+                                       verbose = FALSE, 
                                        summaryFunction = fourStats))
-
+Ktune_topo$bestTune
+Topo_Rcvresults <- Ktune_topo$results %>% mutate(model = "Topo_Rcv")
 stopCluster(cluster)
 registerDoSEQ()
 ```
-
-Now just run a random cv topography only model
-
-```{r}
-
-
-library(recipes)
-
-rec_tunenoSD_topo <-   recipe(stream ~ ., data = train) %>% 
-  update_role(-stream,-accum30,-tpi30agg, new_role = "bring along")
-
-
-cluster <- makeCluster(detectCores() - 1) # convention to leave 1 core for OS
-registerDoParallel(cluster)
-
-set.seed(1234)
-KtunenoSD_topo <- train(rec_tunenoSD_topo, data = train,
-              method = thresh_code,
-              metric = "J",
-              tuneGrid = expand.grid(mtry = 2,ntree=seq(400,2000,200),
-                                     threshold = seq(.44,.54,.02)),
-              trControl = trainControl(method = "repeatedcv",
-                                       repeats = 5,
-                                       classProbs = TRUE,
-                                       savePredictions = 'all',
-                                       summaryFunction = fourStats))
-
-stopCluster(cluster)
-registerDoSEQ()
-
-```
-
-
 

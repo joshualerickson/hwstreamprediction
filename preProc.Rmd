@@ -301,7 +301,7 @@ kableExtra::kable(round(prop.table(table(Stream = data34$stream)),3), caption = 
 ```
 We ended up having a more imbalanced data set then we wanted. 
 
-So we can downsample the higher target class. 
+So we can downsample the higher target class. Always make sure to do after pre-processing to avoid any leakage.
 
 ```{r}
 
@@ -409,7 +409,7 @@ data34$sb_med <- Spatial_Med34$foldID
 write_csv(data34, "data34.csv")
 ```
 
-Now you can see the clusters and check the distribution. This is completely fair to the sb_med since we haven't added the folds to the clusters. We'll do that again in the dataSplit.Rmd file.
+Now you can see the clusters and check the distribution. This is completely fair to the sb_med since we haven't added the folds to the clusters. We'll do that again in the dataSplit.Rmd file. 
 
 ```{r, echo=FALSE, fig.align="center"}
 
@@ -417,3 +417,5 @@ data34 %>% add_count(spatial_cluster40, name = "n_40") %>% add_count(spatial_clu
 
 ```
 
+It's important to note that this method is very subjective (40, 80) and sub-optimal (blocking). The work-around we 
+chose to do was to do a lot of hold-outs. You can see this method in `ffs_script_clustering`, which is the final method we decided to do.

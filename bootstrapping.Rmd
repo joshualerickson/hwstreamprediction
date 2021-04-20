@@ -16,7 +16,9 @@ Now we will bootstrap all the resamples to get 95%  confidence intervals of the 
 
 ```{r}
 
-final_resamp80_means <- plotting_80 %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
+comb <- comb %>% pivot_longer(c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity"), names_to = 'metric')
+
+final_resamp_means <- comb  %>% 
          group_by(model,metric) %>% 
          nest %>% 
          mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
@@ -28,107 +30,46 @@ final_resamp80_means <- plotting_80 %>% filter(metric %in% c("ROC", "J", "Accura
 
 ```
 
-Now do it for the 40 cluster.
-
-```{r}
-final_resamp40_means <- plotting_40 %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
-         group_by(model,metric) %>% 
-         nest %>% 
-         mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
-                                 pull('strap') %>% 
-                                 map_dbl(~ as_tibble(.x) %>% 
-                                          pull('value') %>%
-                                          mean))) %>% select(metric,model, boot) %>% unnest(boot)
-
-
-```
-
-Now for the random CV
-
-```{r}
-final_resampnoSD_means <- noSD_plotting %>% filter(metric %in% c("ROC", "J", "Accuracy", "Kappa", "Sensitivity", "Specificity")) %>% 
-         group_by(model,metric) %>% 
-         nest %>% 
-         mutate(boot = map(data, ~ bootstrap(.x, n = 1000, id = 'value') %>%
-                                 pull('strap') %>% 
-                                 map_dbl(~ as_tibble(.x) %>% 
-                                          pull('value') %>%
-                                          mean))) %>% select(metric,model, boot) %>% unnest(boot)
-
-
-```
 
 Now calculate the 95% confidence interval using both percentile and standard error methods. Use the function from the `infer` package below for calculating the percentiles.
 
 
 ```{r}
 
-plotting_80 <- plotting_80 %>% group_by(model, metric) %>% mutate(point_estimate = mean(value))
+comb <- comb %>% group_by(model, metric) %>% mutate(point_estimate = mean(value))
 
-plotting_40 <- plotting_40 %>% group_by(model, metric) %>% mutate(point_estimate = mean(value))
-
-noSD_plotting <- noSD_plotting %>% group_by(model, metric) %>% mutate(point_estimate = mean(value))
 ```
 
 ```{r}
 
-ci.resamp80se <- final_resamp80_means %>% left_join(plotting_80, by = c("model" = "model", "metric" = "metric")) %>%  rename(stat = "boot") %>% select(-value) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) %>% slice(1) 
+ci.resamp_se <- final_resamp_means %>% left_join(comb, by = c("model" = "model", "metric" = "metric")) %>%  rename(stat = "boot") %>% select(-value) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
 
 #and
 
-ci.resamp80per <- final_resamp80_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
+ci.resamp_per <- final_resamp_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
 
 
 ```
 
 
-Now for 40 cluster 
-
-```{r}
-ci.resamp40se <- final_resamp40_means %>% left_join(plotting_40, by = c("model" = "model", "metric" = "metric")) %>%  rename(stat = "boot") %>% select(-value) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) %>% slice(1) 
-
-
-#and
-
-ci.resamp40per <- final_resamp40_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
-
-```
-
-
-```{r}
-
-ci.resampnoSDse <- final_resampnoSD_means %>% left_join(noSD_plotting, by = c("model" = "model", "metric" = "metric")) %>%  rename(stat = "boot") %>% select(-value) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x, type = "se", point_estimate = .$point_estimate))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) %>% slice(1) 
-
-
-#and
-
-ci.resampnoSDper <- final_resampnoSD_means %>% rename(stat = "boot") %>%  group_by(metric, model) %>% nest() %>% mutate(confidence_intervals = map(data,~ get_confidence_interval(.x))) %>% select(metric, model, confidence_intervals) %>% unnest(confidence_intervals) 
-
-```
 
 Now look at the differences between intervals and model type.
 
 ```{r}
-g1 <- ci.resamp80per %>% mutate(diff = max(`97.5%`) - min(`2.5%`)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in 97.5% to 2.5% (percentiles)", title = "Comparing Bootstrapped Distribution 95% CI (Perc.) of Model Means", subtitle = "80 cluster 10-fold CV")
+g1 <- ci.resamp_per %>% mutate(diff = max(upper_ci) - min(lower_ci)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in 97.5% to 2.5% (percentiles)", title = "Comparing Bootstrapped Distribution 95% CI (Perc.) of Model Means", subtitle = "80 cluster 10-fold CV")
 
-g2 <- ci.resamp80se %>% mutate(diff = max(upper) - min(lower)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in  lower and upper Standard Error (95%)", title = "Comparing Bootstrapped Distribution 95% CI (SE) of Model Means", subtitle = "80 cluster 10-fold CV")
-```
-
-
-```{r}
-g3 <- ci.resamp40per %>% mutate(diff = max(`97.5%`) - min(`2.5%`)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in 97.5% to 2.5% (percentiles)", title = "Comparing Bootstrapped Distribution 95% CI (Perc.) of Model Means", subtitle = "40 cluster 10-fold CV")
-
-g4 <- ci.resamp40se %>% mutate(diff = max(upper) - min(lower)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in lower and upper Standard Error (95%)", title = "Comparing Bootstrapped Distribution 95% CI (SE) of Model Means", subtitle = "40 cluster 10-fold CV")
+g2 <- ci.resamp_se %>% mutate(diff = max(upper_ci) - min(lower_ci)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in  lower and upper Standard Error (95%)", title = "Comparing Bootstrapped Distribution 95% CI (SE) of Model Means", subtitle = "80 cluster 10-fold CV")
 ```
 
 ```{r}
-g5 <- ci.resampnoSDper %>% mutate(diff = max(`97.5%`) - min(`2.5%`)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in 97.5% to 2.5% (percentiles)", title = "Comparing Bootstrapped Distribution 95% CI (Perc.) of Model Means", subtitle = "Random 10-fold CV")
+ci.resamp_per %>% pivot_longer(c(lower_ci, upper_ci)) %>% mutate(model = fct_reorder(model, value, median)) %>% ggplot(aes(model, value)) + geom_point() + geom_errorbar() + facet_wrap(~metric, scales = 'free') 
 
-g6 <- ci.resampnoSDse %>% mutate(diff = max(upper) - min(lower)) %>% ggplot() + geom_col(aes(fct_reorder(model, diff, max), diff, fill = model), show.legend = FALSE) + scale_y_continuous(labels = scales::percent_format()) + facet_wrap(~metric) + coord_flip() + labs(x = "Model", y = "Difference in lower and upper Standard Error (95%)", title = "Comparing Bootstrapped Distribution 95% CI (SE) of Model Means", subtitle = "Random 10-fold CV")
+final_resamp_means %>% filter(metric == "Accuracy") %>% ggplot(aes(boot, color = model)) + geom_density(lwd = 1.5) + geom_rug() + theme_bw() + labs(title = 'Comparing Topography, Topoclimatic and NHDPlus models on Stream Occurrence', subtitle = 'bootstrapped distributions at n = 1000', x = 'Accuracy')
+
+final_resamp_means %>% filter(metric == "Accuracy") %>% ggplot(aes(boot, fill = model)) + geom_histogram(position = 'dodge')
+nhd_f <- final_resamp_means %>% filter(model == 'NHDPlus', metric == 'Accuracy')
+topoclim_f <- final_resamp_means %>% filter(model == 'topoclim', metric == 'Accuracy')
+topo_f <- final_resamp_means %>% filter(model == 'topo', metric == 'Accuracy')
 ```
 
-
-```{r}
-ggpubr::ggarrange(g1,g2,g3,g4,g5,g6, nrow = 3, legend = "right", common.legend = TRUE)
-```
 

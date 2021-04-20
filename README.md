@@ -7,10 +7,8 @@ Workflow Order below. Please take any needed data (e.g., .shp, .csv, .tif files)
 
 2. **ffs_script_clustering** - performing numerous spatial holdouts with ffs.
 
-3. **customRF** - Adapt a custom random forest model for tuning.
+3. **tuning** - Perform tuning on all model types (topoclimatic and topo-only) as well as 10 cluster dependance structures.
 
-5. **tuning** - Perform tuning on all model types (topoclimatic and topo-only) as well as all dependance structures. Total of 6 models.
+4. **nhd_add_resamps** - Bring it all together. Calculate resample statistics including NHDPlus.
 
-6. **nhd_add_resamps** - Bring it all together. Calculate resample statistics including NHDPlus.
-
-7. **bootstrapping** - Create bootstrap distribution confidence intervals (standard error and percentile).
+5. **bootstrapping** - Create bootstrap distribution confidence intervals (standard error and percentile).
