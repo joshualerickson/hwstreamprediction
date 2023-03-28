@@ -1,0 +1,302 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+	<idinfo>
+		<citation>
+			<citeinfo>
+				<origin></origin>
+				<pubdate>19940515</pubdate>
+				<title Sync="TRUE">S_R01_KNF.NfDistBdy</title>
+				<edition>2.0</edition>
+				<geoform Sync="TRUE">vector digital data</geoform>
+				<pubinfo>
+					<pubplace></pubplace>
+					<publish></publish>
+				</pubinfo>
+				<othercit></othercit>
+				<onlink Sync="TRUE">Server=idb.fs.fed.us; Service=sde:oracle10g::g_r01_KNF; User=[s_r01_KNF]; Version=S_R01_KNF.R01_KNF_LIB</onlink>
+				<lworkcit>
+					<citeinfo>
+						<origin></origin>
+						<pubdate></pubdate>
+						<title></title>
+						<pubinfo>
+							<pubplace></pubplace>
+							<publish></publish>
+						</pubinfo>
+						<onlink></onlink>
+					</citeinfo>
+				</lworkcit>
+				<ftname Sync="TRUE">S_R01_KNF.NfDistBdy</ftname></citeinfo>
+		</citation>
+		<descript>
+			<abstract>The Kootenai National Forest District Boundary layer was
+hand manuscripted, digitially scanned and edited, from USGS
+7.5 minute quad maps, and was generated at a scale of
+1:24000 for the forest.
+Converted from coverage to file geodatabase featureclass on 01/07/2010.</abstract>
+			<purpose>
+The District Boundary layer provides administrative
+boundary information of the Ranger districts within the
+Kootenai NF. This
+layer also provides the districts with an internal boundary
+layer from which other larger areas of digital information
+can be clipped.
+</purpose>
+			<supplinf>
+The District boundary information was generated from
+electronic data files which were digitally scanned from
+information compiled at 1:24000 scale. The data in this
+coverage is based on the accuracy and precision of the
+1:24,000
+USGS quad maps, which were used to generate or rectify the
+base map. The
+information on this coverage is subject to revision as
+field data and technical processes improve.
+</supplinf>
+			<langdata Sync="TRUE">en</langdata></descript>
+		<timeperd>
+			<timeinfo>
+				<rngdates>
+					<begdate>199405</begdate>
+				</rngdates>
+			</timeinfo>
+		</timeperd>
+		<status>
+			<progress>Complete</progress>
+			<update>Continually</update>
+		</status>
+		<spdom>
+			<bounding>
+				<westbc Sync="TRUE">-116.214699</westbc>
+				<eastbc Sync="TRUE">-114.662145</eastbc>
+				<northbc Sync="TRUE">49.020073</northbc>
+				<southbc Sync="TRUE">47.601729</southbc>
+			</bounding>
+			<lboundng><leftbc Sync="TRUE">559006.875000</leftbc><rightbc Sync="TRUE">670992.812500</rightbc><bottombc Sync="TRUE">5274543.000000</bottombc><topbc Sync="TRUE">5430001.000000</topbc></lboundng></spdom>
+		<keywords>
+			<theme>
+				<themekt>None</themekt>
+				<themekey>Kootenai</themekey>
+				<themekey>Ranger District</themekey>
+				<themekey>Administrative</themekey>
+			</theme>
+			<place>
+				<placekt>None</placekt>
+				<placekey>Kootenai</placekey>
+				<placekey>National Forest</placekey>
+				<placekey>Montana</placekey>
+				<placekey>Region One</placekey>
+			</place>
+		</keywords>
+		<ptcontac>
+			<cntinfo>
+				<cntpos>GIS Coordinator/Analyst</cntpos>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<address>1101 Hwy 2 West</address>
+					<city>Libby</city>
+					<state>Montana</state>
+					<postal>59923</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>(406) 293-6211</cntvoice>
+				<cntfax>(406) 283-7709</cntfax>
+				<cntemail>dmsmith01@fs.fed.us</cntemail>
+				<cntperp><cntper>Dale Smith</cntper><cntorg>Kootenai National Forest</cntorg></cntperp></cntinfo>
+		</ptcontac>
+		<native Sync="TRUE">Microsoft Windows Vista Version 6.0 (Build 6002) Service Pack 2; ESRI ArcCatalog 9.3.1.4000</native>
+		<natvform Sync="TRUE">SDE Feature Class</natvform></idinfo>
+	<dataqual>
+		<attracc>
+			<attraccr>
+All attributes created during the creation process were
+verified by displaying the lines in both the database and
+the spatial coverage, but no formal tests were performed.
+</attraccr>
+		</attracc>
+		<logic>
+These data are believed to be logically consistent, though
+no tests were performed. Line geometry is topologically clean.
+</logic>
+		<posacc>
+			<horizpa>
+				<horizpar>
+The data were created by delineating the boundary off a
+USGS 7.5 minute Topographic Map at 1:24000 scale.
+Therefore, the horizontal accuracy is assumed to be within
+National Map Accuracy Standards, with a horizontal accuracy
+of 45.6 feet at the 95% confidence level.
+</horizpar>
+			</horizpa>
+			<vertacc>
+				<vertaccr>
+The data were delineated off a USGS 7.5 minute Topographic
+Map at 1:24000 scale. Therefore, the vertical accuracy is
+assumed to be within National Map Accuracy Standards, with
+a vertical accuracy of 11.9 feet at the 95% confidence level.
+</vertaccr>
+			</vertacc>
+		</posacc>
+		<lineage>
+			<srcinfo>
+				<srccite>
+					<citeinfo>
+						<origin>USDA FS - Kootenai National Forest</origin>
+						<pubdate>19940515</pubdate>
+						<title>Kootenai National Forest District Boundary</title>
+						<edition>2.0</edition>
+						<geoform>map</geoform>
+						<pubinfo>
+							<pubplace></pubplace>
+							<publish></publish>
+						</pubinfo>
+						<othercit></othercit>
+						<onlink></onlink>
+						<lworkcit>
+							<citeinfo>
+								<origin></origin>
+								<pubdate></pubdate>
+								<title></title>
+								<pubinfo>
+									<pubplace></pubplace>
+									<publish></publish>
+								</pubinfo>
+								<onlink></onlink>
+							</citeinfo>
+						</lworkcit>
+					</citeinfo>
+				</srccite>
+				<srcscale>24000</srcscale>
+				<srctime>
+					<timeinfo>
+						<rngdates>
+							<begdate>199405</begdate>
+						</rngdates>
+					</timeinfo>
+				</srctime>
+			</srcinfo>
+			<procstep>
+				<proccont>
+					<cntinfo>
+						<cntperp>
+							<cntper></cntper>
+							<cntorg></cntorg>
+						</cntperp>
+						<cntpos></cntpos>
+						<cntaddr>
+							<addrtype>mailing and physical address</addrtype>
+							<address></address>
+							<city></city>
+							<state></state>
+							<postal></postal>
+							<country></country>
+						</cntaddr>
+						<cntvoice></cntvoice>
+						<cntfax></cntfax>
+						<cntemail></cntemail>
+						<hours></hours>
+					</cntinfo>
+				</proccont>
+			</procstep>
+			<procstep><procdesc Sync="TRUE">Dataset copied.</procdesc><srcused Sync="TRUE">\\ds.fs.fed.us\EFS\FS\NFS\Kootenai\Project\Premigration\byoung\Library.gdb</srcused><procdate Sync="TRUE">20110328</procdate><proctime Sync="TRUE">10540200</proctime></procstep></lineage>
+	</dataqual>
+	<spdoinfo>
+		<direct Sync="TRUE">Vector</direct>
+		<ptvctinf><esriterm Name="S_R01_KNF.NfDistBdy"><efeatyp Sync="TRUE">Simple</efeatyp><efeageom code="4" Sync="TRUE"></efeageom><esritopo Sync="TRUE">FALSE</esritopo><efeacnt Sync="TRUE">5</efeacnt><spindex Sync="TRUE">TRUE</spindex><linrefer Sync="TRUE">FALSE</linrefer></esriterm></ptvctinf></spdoinfo>
+	<spref>
+		<horizsys>
+			<planar>
+				<planci>
+					<plance Sync="TRUE">coordinate pair</plance>
+					<coordrep>
+						<absres Sync="TRUE">0.000100</absres>
+						<ordres Sync="TRUE">0.000100</ordres>
+					</coordrep>
+					<plandu Sync="TRUE">meters</plandu>
+				</planci>
+			</planar>
+			<geodetic>
+				<horizdn Sync="TRUE">North American Datum of 1983</horizdn>
+				<ellips Sync="TRUE">Geodetic Reference System 80</ellips>
+				<semiaxis Sync="TRUE">6378137.000000</semiaxis>
+				<denflat Sync="TRUE">298.257222</denflat>
+			</geodetic>
+			<cordsysn><geogcsn Sync="TRUE">GCS_North_American_1983</geogcsn><projcsn Sync="TRUE">NAD_1983_UTM_Zone_11N</projcsn></cordsysn></horizsys>
+		<vertdef><altsys><altenc Sync="TRUE">Explicit elevation coordinate included with horizontal coordinates</altenc><altres Sync="TRUE">1.000000</altres></altsys></vertdef></spref>
+	<eainfo>
+		<detailed Name="S_R01_KNF.NfDistBdy">
+			<enttyp>
+				<enttypl Sync="TRUE">S_R01_KNF.NfDistBdy</enttypl>
+				<enttypd>Polygon Attribute Table</enttypd>
+				<enttypds>None</enttypds>
+				<enttypt Sync="TRUE">Feature Class</enttypt><enttypc Sync="TRUE">5</enttypc></enttyp>
+			<attr><attrlabl Sync="TRUE">OBJECTID</attrlabl><attalias Sync="TRUE">OBJECTID</attalias><attrtype Sync="TRUE">OID</attrtype><attwidth Sync="TRUE">4</attwidth><atprecis Sync="TRUE">10</atprecis><attscale Sync="TRUE">0</attscale><attrdef Sync="TRUE">Internal feature number.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Sequential unique whole numbers that are automatically generated.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">S_R01_KNF.NfDistBdy.AREA</attrlabl><attalias Sync="TRUE">S_R01_KNF.NfDistBdy.AREA</attalias><attrtype Sync="TRUE">Double</attrtype><attwidth Sync="TRUE">8</attwidth><atprecis Sync="TRUE">38</atprecis><attscale Sync="TRUE">8</attscale></attr><attr>
+				<attrlabl Sync="TRUE">Shape</attrlabl>
+				<attrdef Sync="TRUE">Feature geometry.</attrdef>
+				<attrdefs Sync="TRUE">ESRI</attrdefs>
+				<attrdomv>
+					<udom Sync="TRUE">Coordinates defining the features.</udom>
+				</attrdomv>
+				<attalias Sync="TRUE">Shape</attalias><attrtype Sync="TRUE">Geometry</attrtype><attwidth Sync="TRUE">4</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale></attr>
+			<attr><attrlabl Sync="TRUE">PERIMETER</attrlabl><attalias Sync="TRUE">PERIMETER</attalias><attrtype Sync="TRUE">Double</attrtype><attwidth Sync="TRUE">8</attwidth><atprecis Sync="TRUE">38</atprecis><attscale Sync="TRUE">8</attscale></attr><attr><attrlabl Sync="TRUE">NFDISTBDY_</attrlabl><attalias Sync="TRUE">NFDISTBDY_</attalias><attrtype Sync="TRUE">Integer</attrtype><attwidth Sync="TRUE">4</attwidth><atprecis Sync="TRUE">10</atprecis><attscale Sync="TRUE">0</attscale></attr><attr><attrlabl Sync="TRUE">NFDISTBDY_ID</attrlabl><attalias Sync="TRUE">NFDISTBDY_ID</attalias><attrtype Sync="TRUE">Integer</attrtype><attwidth Sync="TRUE">4</attwidth><atprecis Sync="TRUE">10</atprecis><attscale Sync="TRUE">0</attscale></attr><attr><attrlabl Sync="TRUE">DISTRICT_NAME</attrlabl><attalias Sync="TRUE">DISTRICT_NAME</attalias><attrtype Sync="TRUE">String</attrtype><attwidth Sync="TRUE">15</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale></attr><attr><attrlabl Sync="TRUE">DISTRICT_NO_</attrlabl><attalias Sync="TRUE">DISTRICT_NO_</attalias><attrtype Sync="TRUE">SmallInteger</attrtype><attwidth Sync="TRUE">2</attwidth><atprecis Sync="TRUE">5</atprecis><attscale Sync="TRUE">0</attscale></attr><attr><attrlabl Sync="TRUE">ARC_ACRES</attrlabl><attalias Sync="TRUE">ARC_ACRES</attalias><attrtype Sync="TRUE">Double</attrtype><attwidth Sync="TRUE">8</attwidth><atprecis Sync="TRUE">38</atprecis><attscale Sync="TRUE">8</attscale></attr><attr><attrlabl Sync="TRUE">SHAPE.AREA</attrlabl><attalias Sync="TRUE">SHAPE.AREA</attalias><attrtype Sync="TRUE">Double</attrtype><attwidth Sync="TRUE">0</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale></attr><attr><attrlabl Sync="TRUE">SHAPE.LEN</attrlabl><attalias Sync="TRUE">SHAPE.LEN</attalias><attrtype Sync="TRUE">Double</attrtype><attwidth Sync="TRUE">0</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale></attr></detailed>
+		<detailed Name="nfdistbdy.pat"><enttyp><enttypl Sync="TRUE">nfdistbdy.pat</enttypl><enttypt Sync="TRUE">Feature Class</enttypt><enttypc Sync="TRUE">5</enttypc></enttyp><attr><attrlabl Sync="TRUE">FID</attrlabl><attalias Sync="TRUE">FID</attalias><attrtype Sync="TRUE">OID</attrtype><attwidth Sync="TRUE">4</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale><attrdef Sync="TRUE">Internal feature number.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Sequential unique whole numbers that are automatically generated.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">Shape</attrlabl><attalias Sync="TRUE">Shape</attalias><attrtype Sync="TRUE">Geometry</attrtype><attwidth Sync="TRUE">0</attwidth><atprecis Sync="TRUE">0</atprecis><attscale Sync="TRUE">0</attscale><attrdef Sync="TRUE">Feature geometry.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Coordinates defining the features.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">AREA</attrlabl><attwidth Sync="TRUE">4</attwidth><atoutwid Sync="TRUE">12</atoutwid><attrtype Sync="TRUE">Float</attrtype><atnumdec Sync="TRUE">3</atnumdec><attrdef Sync="TRUE">Area of feature in internal units squared.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Positive real numbers that are automatically generated.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">PERIMETER</attrlabl><attwidth Sync="TRUE">4</attwidth><atoutwid Sync="TRUE">12</atoutwid><attrtype Sync="TRUE">Float</attrtype><atnumdec Sync="TRUE">3</atnumdec><attrdef Sync="TRUE">Perimeter of feature in internal units.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Positive real numbers that are automatically generated.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">NFDISTBDY#</attrlabl><attwidth Sync="TRUE">4</attwidth><atoutwid Sync="TRUE">5</atoutwid><attrtype Sync="TRUE">Binary</attrtype><attrdef Sync="TRUE">Internal feature number.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs><attrdomv><udom Sync="TRUE">Sequential unique whole numbers that are automatically generated.</udom></attrdomv></attr><attr><attrlabl Sync="TRUE">NFDISTBDY-ID</attrlabl><attwidth Sync="TRUE">4</attwidth><atoutwid Sync="TRUE">5</atoutwid><attrtype Sync="TRUE">Binary</attrtype><attrdef Sync="TRUE">User-defined feature number.</attrdef><attrdefs Sync="TRUE">ESRI</attrdefs></attr><attr><attrlabl Sync="TRUE">DISTRICT_NAME</attrlabl><attwidth Sync="TRUE">15</attwidth><atoutwid Sync="TRUE">15</atoutwid><attrtype Sync="TRUE">Character</attrtype></attr><attr><attrlabl Sync="TRUE">DISTRICT_NO.</attrlabl><attwidth Sync="TRUE">1</attwidth><atoutwid Sync="TRUE">1</atoutwid><attrtype Sync="TRUE">Integer</attrtype></attr><attr><attrlabl Sync="TRUE">ARC_ACRES</attrlabl><attwidth Sync="TRUE">12</attwidth><atoutwid Sync="TRUE">12</atoutwid><attrtype Sync="TRUE">Number</attrtype><atnumdec Sync="TRUE">0</atnumdec></attr></detailed></eainfo>
+	<distinfo>
+		<distrib>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>Kootenai National Forest</cntorg>
+					<cntper>GIS Coordinator</cntper>
+				</cntorgp>
+				<cntpos>
+				</cntpos>
+				<cntaddr>
+					<addrtype>mailing and physical address</addrtype>
+					<address>1101 Hwy 2 West</address>
+					<city>Libby</city>
+					<state>Montana</state>
+					<postal>59923</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>(406) 293-6211</cntvoice>
+				<cntfax>(406) 283-7709</cntfax>
+				<cntemail>dmsmith01@fs.fed.us</cntemail>
+			</cntinfo>
+		</distrib>
+		<distliab>
+The data in this coverage is based on the accuracy and
+precision of the 1:24,000 USGS quad maps, which were used
+to generate or rectify the base map. The
+information on this coverage is subject to revision as
+field data and technical processes improve.
+Users must assume responsibility to determine the
+appropriate use of these data. The boundary is not to be
+used for a LEGAL definition.
+</distliab>
+		<stdorder><digform><digtinfo><transize Sync="TRUE">0.145</transize><dssize Sync="TRUE">0.145</dssize></digtinfo></digform></stdorder><resdesc Sync="TRUE">Downloadable Data</resdesc></distinfo>
+	<metainfo>
+		<metd Sync="TRUE">20110913</metd>
+		<metc>
+			<cntinfo>
+				<cntorgp>
+					<cntorg>Kootenai National Forest</cntorg>
+					<cntper>Dale Smith</cntper>
+				</cntorgp>
+				<cntpos>GIS Coordinator/Analyst</cntpos>
+				<cntaddr>
+					<addrtype>Mailing and physical address</addrtype>
+					<address>1101 Hwy 2 West</address>
+					<city>Libby</city>
+					<state>Montana</state>
+					<postal>59923</postal>
+					<country>USA</country>
+				</cntaddr>
+				<cntvoice>(406) 293-6211</cntvoice>
+				<cntfax>(406) 293-6139</cntfax>
+				<cntemail>dmsmith01@fs.fed.us</cntemail>
+				<hours></hours>
+			</cntinfo>
+		</metc>
+		<metstdn Sync="TRUE">FGDC Content Standards for Digital Geospatial Metadata</metstdn>
+		<metstdv Sync="TRUE">FGDC-STD-001-1998</metstdv>
+		<langmeta Sync="TRUE">en</langmeta><mettc Sync="TRUE">local time</mettc></metainfo>
+	<Esri><CreaDate>20180423</CreaDate><CreaTime>14390500</CreaTime><SyncOnce>FALSE</SyncOnce><SyncDate>20140814</SyncDate><SyncTime>16111900</SyncTime><ModDate>20140814</ModDate><ModTime>16111900</ModTime><DataProperties><lineage><Process ToolSource="C:\Program Files\ArcGIS\ArcToolbox\Toolboxes\Conversion Tools.tbx\FeatureClassToFeatureClass" Date="20100107" Time="133441">FeatureClassToFeatureClass J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon J:\fsfiles\ref\library\gis2\kootenai\land\lands.gdb nfdistbdy_poly # "AREA 'AREA' false true true 4 Float 0 0 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,AREA,-1,-1;PERIMETER 'PERIMETER' false true true 4 Float 0 0 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,PERIMETER,-1,-1;NFDISTBDY_ 'NFDISTBDY_' false true true 4 Long 0 0 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,NFDISTBDY#,-1,-1;NFDISTBDY_ID 'NFDISTBDY_ID' true true true 4 Long 0 0 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,NFDISTBDY-ID,-1,-1;DISTRICT_NAME 'DISTRICT_NAME' true true false 15 Text 0 0 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,DISTRICT_NAME,-1,-1;DISTRICT_NO_ 'DISTRICT_NO_' true true false 1 Short 0 1 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,DISTRICT_NO.,-1,-1;ARC_ACRES 'ARC_ACRES' true true false 12 Double 0 12 ,First,#,J:\fsfiles\ref\library\gis\kootenai\lands\nfdistbdy\polygon,ARC_ACRES,-1,-1" # J:\fsfiles\ref\library\gis2\kootenai\land\lands.gdb\nfdistbdy_poly</Process><Process ToolSource="C:\Program Files\ArcGIS\ArcToolbox\Toolboxes\Data Management Tools.tbx\CopyFeatures" Date="20110112" Time="151030">CopyFeatures J:\fsfiles\ref\library\gis2\kootenai\land\lands.gdb\NfDistBdy C:\fsfiles\ref\library\gis\kootenai\Library.gdb\Lands\NfDistBdy # 0 0 0</Process><Process ToolSource="c:\program files\arcgis\pro\Resources\ArcToolbox\toolboxes\Data Management Tools.tbx\CalculateGeometryAttributes" Date="20191027" Time="105610">CalculateGeometryAttributes fortine_rexford_RD_Bdy "AREA AREA" # Acres PROJCS['NAD_1983_UTM_Zone_11N',GEOGCS['GCS_North_American_1983',DATUM['D_North_American_1983',SPHEROID['GRS_1980',6378137.0,298.257222101]],PRIMEM['Greenwich',0.0],UNIT['Degree',0.0174532925199433]],PROJECTION['Transverse_Mercator'],PARAMETER['False_Easting',500000.0],PARAMETER['False_Northing',0.0],PARAMETER['Central_Meridian',-117.0],PARAMETER['Scale_Factor',0.9996],PARAMETER['Latitude_Of_Origin',0.0],UNIT['Meter',1.0]]</Process><Process ToolSource="c:\program files\arcgis\pro\Resources\ArcToolbox\toolboxes\Data Management Tools.tbx\CalculateGeometryAttributes" Date="20191117" Time="134906">CalculateGeometryAttributes fortine_rexford_RD_Bdy "ARC_ACRES AREA" # Acres #</Process></lineage><itemProps><itemLocation><linkage Sync="TRUE">file://\\AFSLTHPL142218C\C$\Users\joshualerickson\Documents\GIS\District_H20_exports\Lands_District_stuff\fortine_rexford_RD_Bdy</linkage><protocol Sync="TRUE">Local Area Network</protocol></itemLocation><itemName Sync="TRUE">S_R01_KNF.NfDistBdy</itemName><imsContentType Sync="TRUE">002</imsContentType><nativeExtBox><westBL Sync="TRUE">559006.875000</westBL><eastBL Sync="TRUE">670992.812500</eastBL><southBL Sync="TRUE">5274543.000000</southBL><northBL Sync="TRUE">5430001.000000</northBL><exTypeCode Sync="TRUE">1</exTypeCode></nativeExtBox></itemProps><coordRef><type Sync="TRUE">Projected</type><geogcsn Sync="TRUE">GCS_North_American_1983</geogcsn><csUnits Sync="TRUE">Linear Unit: Meter (1.000000)</csUnits><projcsn Sync="TRUE">NAD_1983_UTM_Zone_11N</projcsn><peXml Sync="TRUE">&lt;ProjectedCoordinateSystem xsi:type='typens:ProjectedCoordinateSystem' xmlns:xsi='http://www.w3.org/2001/XMLSchema-instance' xmlns:xs='http://www.w3.org/2001/XMLSchema' xmlns:typens='http://www.esri.com/schemas/ArcGIS/10.1'&gt;&lt;WKT&gt;PROJCS[&amp;quot;NAD_1983_UTM_Zone_11N&amp;quot;,GEOGCS[&amp;quot;GCS_North_American_1983&amp;quot;,DATUM[&amp;quot;D_North_American_1983&amp;quot;,SPHEROID[&amp;quot;GRS_1980&amp;quot;,6378137.0,298.257222101]],PRIMEM[&amp;quot;Greenwich&amp;quot;,0.0],UNIT[&amp;quot;Degree&amp;quot;,0.0174532925199433]],PROJECTION[&amp;quot;Transverse_Mercator&amp;quot;],PARAMETER[&amp;quot;False_Easting&amp;quot;,500000.0],PARAMETER[&amp;quot;False_Northing&amp;quot;,0.0],PARAMETER[&amp;quot;Central_Meridian&amp;quot;,-117.0],PARAMETER[&amp;quot;Scale_Factor&amp;quot;,0.9996],PARAMETER[&amp;quot;Latitude_Of_Origin&amp;quot;,0.0],UNIT[&amp;quot;Meter&amp;quot;,1.0],AUTHORITY[&amp;quot;EPSG&amp;quot;,26911]]&lt;/WKT&gt;&lt;XOrigin&gt;-5120900&lt;/XOrigin&gt;&lt;YOrigin&gt;-9998100&lt;/YOrigin&gt;&lt;XYScale&gt;10000&lt;/XYScale&gt;&lt;ZOrigin&gt;0&lt;/ZOrigin&gt;&lt;ZScale&gt;1&lt;/ZScale&gt;&lt;MOrigin&gt;0&lt;/MOrigin&gt;&lt;MScale&gt;1&lt;/MScale&gt;&lt;XYTolerance&gt;0.001&lt;/XYTolerance&gt;&lt;ZTolerance&gt;0.001&lt;/ZTolerance&gt;&lt;MTolerance&gt;0.001&lt;/MTolerance&gt;&lt;HighPrecision&gt;true&lt;/HighPrecision&gt;&lt;WKID&gt;26911&lt;/WKID&gt;&lt;LatestWKID&gt;26911&lt;/LatestWKID&gt;&lt;/ProjectedCoordinateSystem&gt;</peXml></coordRef><copyHistory><copy source="C:\Users\joshualerickson\Documents\GIS\District_H20_exports\fortine_rexford_RD_Bdy" dest="\\AFSLTHPL142218C\C$\Users\joshualerickson\Documents\GIS\District_H20_exports\Lands_District_stuff\fortine_rexford_RD_Bdy" date="20180509" time="16373200"></copy></copyHistory></DataProperties><ArcGISFormat>1.0</ArcGISFormat><ArcGISstyle>XTools Pro Metadata</ArcGISstyle></Esri><dataIdInfo><envirDesc Sync="TRUE">Microsoft Windows Server 2008 Version 6.0 (Build 6002) Service Pack 2; Esri ArcGIS 10.1.1.3143</envirDesc><dataLang><languageCode Sync="TRUE" value="eng"></languageCode><countryCode value="USA" Sync="TRUE"></countryCode></dataLang><idCitation><resTitle Sync="TRUE">S_R01_KNF.NfDistBdy</resTitle><presForm><PresFormCd Sync="TRUE" value="005"></PresFormCd></presForm></idCitation><spatRpType><SpatRepTypCd Sync="TRUE" value="001"></SpatRepTypCd></spatRpType><dataExt><geoEle><GeoBndBox esriExtentType="native"><westBL Sync="TRUE">559006.875</westBL><eastBL Sync="TRUE">670992.8125</eastBL><northBL Sync="TRUE">5430001</northBL><southBL Sync="TRUE">5274543</southBL><exTypeCode Sync="TRUE">1</exTypeCode></GeoBndBox></geoEle></dataExt><geoBox esriExtentType="decdegrees"><westBL Sync="TRUE">-116.214699</westBL><eastBL Sync="TRUE">-114.662145</eastBL><northBL Sync="TRUE">49.020073</northBL><southBL Sync="TRUE">47.601729</southBL><exTypeCode Sync="TRUE">1</exTypeCode></geoBox><dataExt><geoEle><GeoBndBox esriExtentType="search"><exTypeCode Sync="TRUE">1</exTypeCode><westBL Sync="TRUE">-116.214699</westBL><eastBL Sync="TRUE">-114.662145</eastBL><northBL Sync="TRUE">49.020073</northBL><southBL Sync="TRUE">47.601729</southBL></GeoBndBox></geoEle></dataExt></dataIdInfo><mdLang><languageCode Sync="TRUE" value="eng"></languageCode><countryCode value="USA" Sync="TRUE"></countryCode></mdLang><mdStanName Sync="TRUE">ISO 19115 Geographic Information - Metadata</mdStanName><mdStanVer Sync="TRUE">DIS_ESRI1.0</mdStanVer><mdChar><CharSetCd Sync="TRUE" value="004"></CharSetCd></mdChar><mdHrLv><ScopeCd Sync="TRUE" value="005"></ScopeCd></mdHrLv><mdHrLvName Sync="TRUE">dataset</mdHrLvName><distInfo><distributor><distorTran><onLineSrc><orDesc Sync="TRUE">002</orDesc><linkage Sync="TRUE">Server=idb.fs.fed.us; Service=sde:oracle10g::g_r01_KNF; User=[s_r01_KNF]; Version=S_R01_KNF.R01_KNF_LIB</linkage><protocol Sync="TRUE">ArcSDE Connection</protocol></onLineSrc><transSize Sync="TRUE">0.145</transSize></distorTran><distorFormat><formatName Sync="TRUE">SDE Feature Class</formatName></distorFormat></distributor><distFormat><formatName Sync="TRUE">SDE Feature Class</formatName></distFormat></distInfo><refSysInfo><RefSystem><refSysID><identCode Sync="TRUE" code="26911">NAD_1983_UTM_Zone_11N</identCode><idCodeSpace Sync="TRUE">EPSG</idCodeSpace><idVersion Sync="TRUE">7.11.2</idVersion></refSysID></RefSystem></refSysInfo><spatRepInfo><VectSpatRep><geometObjs Name="S_R01_KNF.NfDistBdy"><geoObjTyp><GeoObjTypCd value="002" Sync="TRUE"></GeoObjTypCd></geoObjTyp><geoObjCnt Sync="TRUE">5</geoObjCnt></geometObjs><topLvl><TopoLevCd value="001" Sync="TRUE"></TopoLevCd></topLvl></VectSpatRep></spatRepInfo><mdDateSt Sync="TRUE">20140814</mdDateSt></metadata>
