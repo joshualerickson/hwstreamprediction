@@ -1,5 +1,5 @@
 ---
-title: "FFS RF without 3rd and 4th Orders"
+title: "Preprocessing Stream Occurrence Data"
 author: "Josh Erickson"
 date: "April 14, 2020"
 output: html_document
@@ -9,6 +9,7 @@ output: html_document
 
 library(sf)
 library(raster)
+library(terra)
 library(caret)
 library(CAST)
 library(blockCV)
@@ -17,49 +18,47 @@ library(corrplot)
 library(tidyverse)
 ```
 
-Now bring in all the TIFs to be used in the anlaysis and stack/visualise.
+Now bring in all the TIFs to be used in the analysis and stack/visualise. You'll need to download these from [google drive](https://drive.google.com/drive/folders/100in8JlxDCbRLTPCzQ-p9D54SQxIP37d?usp=sharing) and put into a folder.  
+
 ```{r, eval=FALSE}
-library(raster)
 
+twi30 <- rast("D:/R_folder/Rasters/Common/twi30agg.tif") #TWI
 
-twi30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/twi30agg.tif") #TWI
+vvsd30 <- rast("D:/R_folder/Rasters/Common/vvsd30agg.tif") #vertical vertical sd
 
-vvsd30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/vvsd30agg.tif") #vertical vertical sd
+vv30 <- rast("D:/R_folder/Rasters/Common/vv30agg.tif") #vertical vertical mean
 
-vv30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/vv30agg.tif") #vertical vertical mean
+npol30 <- rast("D:/R_folder/Rasters/Common/npol30agg.tif") #normalized polarization 
 
-npol30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/npol30agg.tif") #normalized polarization 
+accum30 <- rast("D:/R_folder/Rasters/Common/accum30.tif") #UAA d-infinity aggregated from 10-m
 
-accum30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/accum30.tif") #UAA d-infinity aggregated from 10-m
+nppMid30 <- rast("D:/R_folder/Rasters/Common/nppmmid30agg.tif") #NPP median '86-18'
 
-nppMid30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/nppmmid30agg.tif") #NPP median '86-18'
+deficit <- rast("D:/R_folder/Rasters/Common/deficitRS.tif") # annual CWD 30 yr
 
-deficit <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/deficitRS.tif") # annual CWD 30 yr
+wtrbdy30 <- rast("D:/R_folder/Rasters/Common/wtrbdy30agg.tif") #waterbodies
 
-wtrbdy30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/wtrbdy30agg.tif") #waterbodies
+tpi30 <- rast("D:/R_folder/Rasters/Common/tpi30agg.tif") #TPI
 
-tpi30 <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/tpi30agg.tif") #TPI
+CAD <- terra::rast("D:/R_folder/Rasters/Common/cad30RS.tif") #cold air drainage
 
-CAD <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/cad30RS.tif") #cold air drainage
+decid <- rast("D:/R_folder/Rasters/Common/decid30RS.tif") #deciduous
 
-decid <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/decid30RS.tif") #deciduous
+Blue <- rast("D:/R_folder/Rasters/Common/Blue_med.tif") #blue (B2)
 
-Blue <- raster("Blue_med.tif") #blue (B2)
+Green <- rast("D:/R_folder/Rasters/Common/Green_med.tif") #green (B3)
 
-Green <- raster("Green_med.tif") #green (B3)
+Red <- rast("D:/R_folder/Rasters/Common/Red_med.tif") #red (B4)
 
-Red <- raster("Red_med.tif") #red (B4)
+NIR <- rast("D:/R_folder/Rasters/Common/NIR_med.tif") #Near Infrared (B8)
 
-NIR <- raster("NIR_med.tif") #Near Infrared (B8)
-
-NDVI <-  raster("NDVI_med.tif")
+NDVI <-  rast("D:/R_folder/Rasters/Common/NDVI_med.tif")
   
-NDWI <-  raster("NDWI_med.tif")
+NDWI <-  rast("D:/R_folder/Rasters/Common/NDWI_med.tif")
 
-cpgPrecip <- raster("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_Workflow/cpg30precip.tif") #Continuous parameter grid (precipitation/PRISM).
+cpgPrecip <- rast("D:/R_folder/Rasters/Common/cpg30precip.tif") #Continuous parameter grid (precipitation/PRISM).
 
-
-topo_opt_rad34 <- stack(twi30, tpi30, accum30,vv30, vvsd30, npol30,  NDVI, NDWI, nppMid30, deficit, CAD, decid, Blue, Green, Red, NIR, cpgPrecip)
+topo_opt_rad34 <- rast(list(twi30, tpi30, accum30,vv30, vvsd30, npol30,  NDVI, NDWI, nppMid30, deficit, CAD, decid, Blue, Green, Red, NIR, cpgPrecip))
 ```
 
 Now visualise.
@@ -78,7 +77,7 @@ Bring in the points collected in the field.
 #combine point objects
 proj.study <- "+proj=aea +lat_1=46 +lat_2=48 +lat_0=44 +lon_0=-109.5 +x_0=600000 +y_0=0 +datum=NAD83 +units=m +no_defs +ellps=GRS80 +towgs84=0,0,0"
 
-pts34 <- read_sf("D:/Rcodes/Water_Prediction/Hird_Water_Prediction/waterD/waterPred/Final_workflow/points_spaced30m.shp")  #points to the folder/feature
+pts34 <- read_sf("data/hw_study.gpkg", layer = "points_spaced30m")  #points to the folder/feature
 
 st_crs(pts34) <- proj.study
 
@@ -86,23 +85,22 @@ pts34 <- st_transform(pts34, crs = proj.study)
 
 #clean up
 
-pts34 <- pts34[,c(2)]
+pts34 <- pts34[,c('copy_TWI_1')]
 
 ```
 
 
-Now bring in the applicable polygons for clipping, etc.
+Now bring in the applicable polygons for clipping, etc. Just use the final products in the `hw_study.gpkg`. This is just showing the processs. 
 ```{r, eval=FALSE}
-lands_folder <- "D:/documents/Documents/Josh/Documents/GIS/District_H20_exports/Lands_District_stuff"
 
 #Get forest service boundary
-FSland <- read_sf(paste0(lands_folder, "/knf_ownership.shp"))
+FSland <- read_sf("data/KNF_ownership.shp")
 FSland <- FSland[FSland$OWNER == 'FS',]
 
 FSland <- st_transform(FSland, proj.study)
 
 #Get District Boundary
-DistrictBoundary <- read_sf(paste0(lands_folder, "/fortine_rexford_RD_Bdy.shp"))[1]
+DistrictBoundary <- read_sf("data/district_boundary.shp")[1]
 
 DistrictBoundary <- st_transform(DistrictBoundary, proj.study)
 #now intersect
@@ -111,13 +109,13 @@ landClip <- st_intersection(FSland, DistrictBoundary)
 #read in the landClip we created and call it FSland
 FSland <- landClip
 
-plot(FSland)
+plot(FSland[1])
 
 ##st_write(landClip, 'hw_study.gpkg', "LandClip", driver = "ESRI Shapefile", update = TRUE)
 ##st_write(DistrictBoundary, 'hw_study.gpkg', "DistrictBoundary", driver = "ESRI Shapefile")
 ```
 
-Now we'll need to bring in the NHDPlus layer and then rasterize so that we can get NHDPlus baseline data. Better to do now then latter.
+Now we'll need to bring in the NHDPlus layer and then rasterize so that we can get NHDPlus baseline data. You'll need to download to a tempfile or file path of choice if you want to reproduce it otherwise just use the final `nhdStrOrdRast.tif`.
 
 ```{r, eval=FALSE}
 
@@ -145,11 +143,11 @@ This just reads in the data we created from above and rasterizes it.
 nhdDistrictSF <- st_read("hw_study.gpkg", "nhdDistrictSF")
 #now make a 30m raster with streamorder
 
-ndhStrOrdRast <- rasterize(nhdDistrict, tpi30, field = "StreamOrde")
+ndhStrOrdRast <- rasterize(vect(nhdDistrict), tpi30, field = "StreamOrde")
 
-writeRaster(ndhStrOrdRast, "nhdStrOrdRast.tiff", overwrite = TRUE)
+writeRaster(ndhStrOrdRast, "data/nhdStrOrdRast.tiff", overwrite = TRUE)
 
-nhdStrOrdRast <- raster("nhdStrOrdRast.tif")
+nhdStrOrdRast <- rast("data/nhdStrOrdRast.tif")
 
 ```
 
@@ -168,13 +166,13 @@ Now add that NHDPlus raster to the main raster stack and perform the masking out
 
 ```{r, eval = FALSE}
 #add nhd raster
-topo_opt_rad34 <- addLayer(topo_opt_rad34, nhdStrOrdRast)
+topo_opt_rad34 <- c(topo_opt_rad34, nhdStrOrdRast)
 
-thrty.34 <- mask(topo_opt_rad34, wtrbdy30, inverse = TRUE) #mask out waterbodies if you want
+thrty.34 <- terra::mask(topo_opt_rad34, wtrbdy30, inverse = TRUE) #mask out waterbodies if you want
 
-thrty.34 <- mask(thrty.34, FSland) #mask out non-Forest Service land
+thrty.34 <- terra::mask(thrty.34, terra::vect(FSland)) #mask out non-Forest Service land
 
-thrty.34 <- raster::extract(thrty.34, pts34) #extract the values from raster by point data
+thrty.34 <- terra::extract(thrty.34, vect(pts34)) #extract the values from raster by point data
 
 top34.opt.rad <- cbind(pts34, thrty.34)
 
@@ -193,22 +191,19 @@ st_geometry(top34.opt.rad) <- NULL
 
 top34.opt.rad <- data.frame(cbind(top34.opt.rad,top34coords, top34lonlat))
 
-
-
-write.csv(top34.opt.rad, file = "top34.opt.rad.csv")
+write.csv(top34.opt.rad, file = "data/top34.opt.rad.csv")
 ```
 
-Now clean up the data. Pre-proccessing.
+Now clean up the data. Pre-proccessing.  
 
 ```{r, eval = FALSE}
-top34.opt.rad <- read.csv("top34.opt.rad.csv", header = TRUE)[-1]
+top34.opt.rad <- read.csv("data/top34.opt.rad.csv", header = TRUE)[-1]
 
 data34 <- top34.opt.rad #change for ease
 
 #change names
-names(data34)[1] <- "stream"
-
-names(data34)[19] <- "NHDPlus"
+data34 <- data34 %>% rename(stream = 'copy_TWI_1', 
+                            NHDPlus = 'nhdStrOrdRast')
 
 data34$stream <- factor(data34$stream)
 
@@ -223,18 +218,18 @@ data34 <- data34 %>% filter(NHDPlus < 3)
 
 # write csv
 
-write.csv(data34, file = "data34.csv")
+write.csv(data34, file = "data/data34.csv")
 
 ```
 
 Now we can start looking at some of the data visually.
 
 ```{r, eval = FALSE}
-data34 <- read_csv("data34.csv")[-1]
+data34 <- read_csv("data/data34.csv")[-1]
 
 summary(data34)
 
-data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% pivot_longer(cols = everything(), names_to = "Feature", values_to = "value") %>% ggplot() + geom_boxplot(aes(value, color = Feature)) + coord_flip()
+data34 %>% dplyr::select(Blue_med, Red_med, Green_med, NIR_med)  %>% pivot_longer(cols = everything(), names_to = "Feature", values_to = "value") %>% ggplot() + geom_boxplot(aes(value, color = Feature)) + coord_flip()
 
 
 
@@ -242,7 +237,7 @@ data34 %>% select(Blue_med, Red_med, Green_med, NIR_med)  %>% pivot_longer(cols 
 
 ```{r echo=FALSE, fig.align='center'}
 
-data34 %>% mutate(accum30 = log(accum30)) %>% select(npol30agg, accum30) %>% pivot_longer(cols = everything(), names_to = "Feature", values_to = "value") %>% ggplot() + geom_boxplot(aes(value)) + coord_flip() + facet_wrap(~Feature, scales = "free_y")
+data34 %>% mutate(accum30 = log(accum30)) %>% dplyr::select(npol30agg, accum30) %>% pivot_longer(cols = everything(), names_to = "Feature", values_to = "value") %>% ggplot() + geom_boxplot(aes(value)) + coord_flip() + facet_wrap(~Feature, scales = "free_y")
 
 
 
@@ -268,7 +263,7 @@ After visualising, we can take a deeper look and search the data frame for corre
 
 ```{r fig.align='center', eval = FALSE}
 
-correlations34 <- cor(data34[,-c(1,19,20,21,22,23)]) #remove response and coords and NHDPlus
+correlations34 <- cor(data34 %>% select(twi30agg:cpg30precip)) #remove response and coords and NHDPlus
 corrplot(correlations34, order = "hclust")
 
 highCorr34 <- findCorrelation(correlations34, cutoff = 0.9)
@@ -314,7 +309,7 @@ set.seed(1234)
 data34 <- downSample(data34, data34$stream)
 
 
-write_csv(data34, "data34.csv", append = FALSE)
+write_csv(data34, "data/data34.csv", append = FALSE)
 ```
 
 ```{r, out.width= "70%", fig.align='center', message=FALSE}
@@ -328,20 +323,18 @@ barplot(prop.table(table(data34$stream)),
 Now we want to bring in our point data along with our covariates and clean up all the preprocessing we did. 
 ```{r}
 
-data34 <- read_csv("data34.csv")
+data34 <- read_csv("data/data34.csv")
 
 ptsSF34 <- st_as_sf(data34, coords = c("utm1","utm2"))
 
 st_crs(ptsSF34) <- proj.study
 
-
-
-topo_new34 <- dropLayer(topo_opt_rad34, c("Blue_med", "Red_med", "NDWI_med")) #covariate stack
+topo_new34 <- topo_opt_rad34[[-which(names(topo_opt_rad34) %in% c("NDWI_med", "Blue_med", "Red_med"))]] #covariate stack
 
 crs(topo_new34) <- proj.study
 ```
 
-Now we can figure out our 'effictive range of spatial autocorrelation' by using the function `spatialAutoRange` in `blockCV`. This is a cool function because it takes the covariates, calculates the range of autocorrelation (from $n$ sampled points), and then produces two plots showing the range of the covariates and the recommended block size for validation.  
+Now we can figure out our 'effective range of spatial autocorrelation' by using the function `spatialAutoRange` in `blockCV`. This is a cool function because it takes the covariates, calculates the range of autocorrelation (from $n$ sampled points), and then produces two plots showing the range of the covariates and the recommended block size for validation.  
 
 ```{r}
 
@@ -354,13 +347,12 @@ sac34 <- blockCV::spatialAutoRange(rasterLayer = topo_new34,
 
 ```{r}
 
-Spatial_Med34 <- blockCV::spatialBlock(speciesData = ptsSF34, # presence-background data
-                    species = "stream",
-                    rasterLayer = topo_new34,
+Spatial_Med34 <- blockCV::cv_spatial(x = ptsSF34, # presence-background data
+                    column = "stream",
+                    r = topo_new34,
                     k = 10,
-                      theRange = 5716,
                     selection = "systematic",
-                    biomod2Format = TRUE)
+                    biomod2 = TRUE)
 
 ```
 
@@ -374,7 +366,7 @@ Finally, we can do a `kmeans` with a cluster of 80. This will be our large struc
 #need coordinates.
 #remember to use the coordinates, that's why we've kept them!
 data34 <- data34[,-21] #take out the class added when we downsampled
-write_csv(data34, "data34.csv")
+write_csv(data34, "data/data34.csv")
 Mycluster80 <- kmeans(data34[,c(17,18)], (nrow(data34)/80)) 
 
 # add the new variable back to your dataframe here
@@ -402,20 +394,14 @@ ptsSF34$spatial_cluster40 = data34$spatial_cluster40
 Now add the spatial block medium.
 
 ```{r}
-data34$sb_med <- Spatial_Med34$foldID
+data34$sb_med <- Spatial_Med34$folds_ids
 ```
 
 ```{r}
-write_csv(data34, "data34.csv")
+write_csv(data34, "data/data34.csv")
 ```
 
-Now you can see the clusters and check the distribution. This is completely fair to the sb_med since we haven't added the folds to the clusters. We'll do that again in the dataSplit.Rmd file. 
-
-```{r, echo=FALSE, fig.align="center"}
-
-data34 %>% add_count(spatial_cluster40, name = "n_40") %>% add_count(spatial_cluster80, name = "n_80") %>% add_count(sb_med, name = "n_med") %>% summarise(across(starts_with("n_"), list(mean = mean, median = median, standard_deviation = sd))) %>% t()
-
-```
 
 It's important to note that this method is very subjective (40, 80) and sub-optimal (blocking). The work-around we 
 chose to do was to do a lot of hold-outs. You can see this method in `ffs_script_clustering`, which is the final method we decided to do.
+

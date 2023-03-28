@@ -6,6 +6,7 @@ library(randomForest)
 library(tidyverse)
 library(doParallel)
 library(parallel)
+source('utils.R')
 
 #read in data generated from pre-processing
 
@@ -117,13 +118,12 @@ for (i in seq_along(index_list)){
   
 }
 
-library(tidyverse)
-ffs_results <- read_csv("D:/sending/ffs_results_full_52_clusters.csv")
+library(dplyr)
 
 #this removes `vars` as list column and makes character
 ffs_results <- ffs_results %>%
   mutate(char_vars = str_remove_all(vars, c("^c" = "", "\\(|\\)" = "", "[\"]" = ""))) %>% 
   select(-vars)
 
-
+write_csv(ffs_results, 'all_results_final.csv')
 
